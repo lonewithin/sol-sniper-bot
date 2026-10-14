@@ -31,7 +31,7 @@ async function pumpSell(p,pct){const kp=W.load();const bytes=await F.build(kp.pu
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
  const r=rules(tier)||rules('SWING');
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
- if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?Math.max(S.maxPerTrade,S.bigBuySol):S.maxPerTrade).toFixed(4);const big=tier==='BIG';const dk=(big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=big?S.bigMaxDailySol:S.maxDailySol;
+ if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:S.maxPerTrade).toFixed(4);const big=tier==='BIG';const dk=(big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=big?S.bigMaxDailySol:S.maxDailySol;
  if(spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
  if(st.open.filter(p=>(p.tier==='BIG')===big).length>=(big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
@@ -65,6 +65,9 @@ async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk|
   else if(r.partialAt&&!p.halfDone&&curCh>=r.partialAt){p.halfDone=true;await sell(p,`Partial take-profit: sold half at ${f1(curCh)} (target +${r.partialAt}%). Stop moved to breakeven; the rest rides with a ${trail}% trailing stop`,0.5);continue;}
   else if(r.tp&&curCh>=r.tp)why=`Take profit: hit ${f1(curCh)} (target +${r.tp}%)`;
   else if(trail&&armed&&p.peak>=10&&curCh<=p.peak-trail)why=`Trailing stop: fell ${(p.peak-curCh).toFixed(0)}% from its +${p.peak.toFixed(0)}% peak, locked ${f1(ch)}`;
+  else if(p.tier==='BIG'&&age>=(p.holdLim||r.maxMin)){const lim=p.holdLim||r.maxMin,next=lim+S.bigExtendH*60,pc=pairs[p.mint]?.priceChange||{};const mom=(pc.h1??0)>0&&(pc.m5??0)>=0;
+   if(curCh>p.peak-trail&&mom&&S.bigExtendH>0&&next<=S.bigMaxHoldH*60){p.holdLim=next;notify(`<b>${label(p)}</b>\n⏳ Still running ${p.symbol} (${f1(ch)}, 1h ${(pc.h1??0).toFixed(1)}%): hold extended to ${(next/60).toFixed(0)}h (max ${S.bigMaxHoldH}h)`);}
+   else why=`Time limit: held ${(lim/60).toFixed(0)}h${mom?'':', momentum faded'}, closed at ${f1(ch)}`;}
   else if(age>=r.maxMin)why=`Time limit: held ${r.maxMin>=120?(r.maxMin/60)+'h':r.maxMin+' min'}, closed at ${f1(ch)}`;
   else if(p.tier!=='BIG'&&age>=1&&m.potential<S.momentumExit&&pairs[p.mint])why=`Momentum faded: potential dropped to ${m.potential} (exit below ${S.momentumExit}), closed at ${f1(ch)}`;
   if(why)await sell(p,why);p.fails=0;}catch(e){p.fails=(p.fails||0)+1;const age=(Date.now()-p.opened)/6e4,r=p.rules||rules('SWING');if(p.paper&&p.tier!=='BIG'&&age>=r.maxMin+5&&p.fails>=6){st.open=st.open.filter(x=>x!==p);const out=(p.last||0)+p.realized;const c={...p,solOut:out,exit:0,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why:'No sell quote (no route): closed at last known value',closed:Date.now(),holdMin:+age.toFixed(1),sellSig:'PAPER'};st.closed.push(c);L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why:c.why,holdMin:c.holdMin,paper:true,opened:c.opened,closed:c.closed});notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} [paper]\n📝 ${c.why}\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct.toFixed(1)}%) · held ${c.holdMin}m`)}}}save();}

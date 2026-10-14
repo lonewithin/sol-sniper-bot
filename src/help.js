@@ -44,7 +44,7 @@ sell:['📈 Selling & tiers',`The bot picks a <b>tier</b> from the potential sco
 <i>Trailing</i> = it sells once the price falls that % from its highest point.
 • <code>trailArmPct</code>: for SECOND/RUNNER/BIG the trailing stop only switches on after the coin is up this %. <i>30</i>
 • <code>trailGraceMin</code>: …or after this many minutes. The normal stop loss still protects you meanwhile. <i>3</i>
-• Trail size per strategy: <code>swingTrail</code> 15 · <code>runnerTrail</code> 20 · <code>secondChanceTrail</code> 20 · <code>bigTrail</code> 25
+• Trail size per strategy: <code>swingTrail</code> 15 · <code>runnerTrail</code> 20 · <code>secondChanceTrail</code> 20 · <code>bigTrail</code> 20
 • After a partial take-profit, the stop moves to <b>breakeven</b>, so the rest can't turn into a loss.
 Every sell message explains the exit in plain words.
 
@@ -110,8 +110,8 @@ big:['🐋 Big Play',
 Both also need /auto on. /settings has buttons for both.
 
 <b>How Big Play picks coins</b>: trending/boosted DexScreener coins with market cap between <code>bigMinMcap</code> ($100k) and <code>bigMaxMcap</code> ($20M), liquidity ≥ <code>bigMinLiq</code> ($50k), age ≥ <code>bigMinAgeH</code> (1h), 1h volume above the 6h average, buys÷sells ≥ <code>bigMinRatio</code> (1.2), holders growing, safety ≥ <code>bigMinScore</code> (60), no ⛔ hard blockers. It enters on <b>momentum</b> (going up now) or a <b>pullback</b> (big 6h run, small 1h dip).
-<b>Selling</b>: sells half at +<code>bigPartialAt</code> (100% = 2x), trails the rest by <code>bigTrail</code> 25%, stop loss −<code>bigSl</code> 30%, max hold <code>bigMaxHoldH</code> 24h. It checks every <code>bigPollSec</code> 45s.
-<b>Budget</b>: <code>bigBuySol</code> 0.05 per trade · <code>bigMaxOpen</code> 2 · <code>bigMaxDailySol</code> 0.15/day · scan every <code>bigScanMin</code> 5 min.
+<b>Selling</b>: sells half at +<code>bigPartialAt</code> 50%, trails the rest by <code>bigTrail</code> 20%, stop loss −<code>bigSl</code> 25%. It checks every <code>bigPollSec</code> 45s.
+<b>Budget</b> (fixed amounts you set, any size): <code>bigBuySol</code> 0.05 SOL per trade · <code>bigMaxDailySol</code> 0.3 SOL/day · <code>bigMaxOpen</code> 3 · scan every <code>bigScanMin</code> 5 min. Change with /set bigBuySol 0.5 etc.\n<b>Riding winners</b>: after <code>bigBaseHoldH</code> 4h, if it's still above its trailing stop and the 1h trend is up, the hold extends by <code>bigExtendH</code> 2h at a time, up to <code>bigMaxHoldH</code> 24h.
 /stats → 🐋 Big Play page.`],
  test:['🧪 Testing & stats',`/pnl: total profit/loss, wins, losses, win rate
 /stats: dashboard with buttons. <b>Overview</b> (today/all-time, win rate bar, PnL), <b>Hunting</b> (sources, skip reasons, speed), <b>Trades</b> (by tier, best/worst, last 5), <b>Wallet</b> (balance, capital, profit, open positions)

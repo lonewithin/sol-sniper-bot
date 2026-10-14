@@ -25,7 +25,7 @@ function potential(pair,{safety=0,holders=null,mint}={}){
 function rules(tier){return {
  SCALP:{tp:S.scalpTp,sl:S.scalpSl,trail:0,maxMin:S.scalpMaxMin,partialAt:0,size:S.scalpSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100},
  SWING:{tp:S.swingTp,sl:S.swingSl,trail:S.swingTrail,maxMin:S.swingMaxMin,partialAt:0,size:S.swingSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100},
- BIG:{tp:0,sl:S.bigSl,trail:S.bigTrail,maxMin:S.bigMaxHoldH*60,partialAt:S.bigPartialAt,size:1},
+ BIG:{tp:0,sl:S.bigSl,trail:S.bigTrail,maxMin:(S.bigBaseHoldH||4)*60,partialAt:S.bigPartialAt,size:1},
  SECOND:{tp:0,sl:S.secondChanceSl,trail:S.secondChanceTrail,maxMin:S.runnerMaxMin,partialAt:S.runnerPartialAt,size:S.secondChanceSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100},
  RUNNER:{tp:0,sl:S.runnerSl,trail:S.runnerTrail,maxMin:S.runnerMaxMin,partialAt:S.runnerPartialAt,size:S.runnerSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100}}[tier];}
 module.exports={potential,pairsFor,rules};
