@@ -10,6 +10,8 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.callbackQuery('pf:menu',async c=>{c.answerCallbackQuery();c.reply(...await profitMenu())});
  bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
   if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
+  if(k==='missedAlerts'){S.missedAlerts=/^(on|true|1)$/i.test(v);save();return c.reply('missedAlerts = '+S.missedAlerts)}
+  if(k==='alerts'){if(!['all','trades','score','off'].includes(v))return c.reply('alerts all|trades|score|off');S.alerts=v;save();return c.reply('alerts = '+v)}
   if(k==='mode'){if(!['fast','safe'].includes(v))return c.reply('mode fast|safe');S.mode=v;save();return c.reply('mode = '+v+(v==='fast'?' ⚡ (instant checks only before buy, full checks after)':''))}
   if(typeof S[k]==='boolean'){if(['auto','paper'].includes(k))return c.reply('Use /'+k);S[k]=/^(on|true|1)$/i.test(v);save();return c.reply(`${k} = ${S[k]}`)}const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
   if(k==='buySol'&&n>S.maxPerTrade)return c.reply(`buySol > maxPerTrade (${S.maxPerTrade})`);S[k]=n;save();c.reply(`${k} = ${n}`)});
@@ -31,7 +33,7 @@ Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume a
 • SWING (pot ≥ ${S.potSwing}): TP +${S.swingTp}% · SL -${S.swingSl}% · trail ${S.swingTrail}% · max ${S.swingMaxMin}m · size ×1
 • RUNNER (pot ≥ ${S.potRunner}): sell 50% at +${S.runnerPartialAt}%, trail ${S.runnerTrail}% rest · SL -${S.runnerSl}% · max ${S.runnerMaxMin}m · size ×1.5
 Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling ${S.sizeByPotential?'ON':'OFF'} (always capped at ${S.maxPerTrade} SOL/trade, ${S.maxDailySol}/day). Autotune ${S.autotune?'ON':'OFF'}.`));
- bot.command('stats',c=>{const r=require('./tune');const l=r.stats();const t=r.tune(20);c.reply((l.length?l.join('\n'):'No closed trades yet')+`\n\nObservations: ${t.nObs}\nSuggested: minScore ${t.best.minScore}, scalp ${t.best.potScalp}, swing ${t.best.potSwing}, runner ${t.best.potRunner} (sim avg ${t.best.avg.toFixed(1)}% over ${t.best.n})`)});
+ require('./dashboard').install(bot);
  const profitMenu=async()=>{const SW=require('./sweep');const p=await SW.plan().catch(()=>({bal:0,amt:0}));const t=SW.todayPnl();
   return [`💰 Profit\nMode: ${S.autoSweep?'Auto daily 23:55 WAT':'Manual (reminder at 23:55 WAT)'}\nAddress: <code>${S.profitAddress}</code>\nToday's realized PnL: ${t.pnl>=0?'+':''}${t.pnl.toFixed(5)} SOL (${t.n} trades${t.paper?', incl. paper':''})\nSweepable now: ${p.amt} SOL (balance ${p.bal.toFixed(4)}, capital ${S.capital})`,{parse_mode:'HTML',reply_markup:new InlineKeyboard().text(S.autoSweep?'🔁 Switch to Manual':'🔁 Switch to Auto','pf:toggle').text('💸 Send now','pf:send')}];};
  bot.command('profit',async c=>c.reply(...await profitMenu()));

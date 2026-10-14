@@ -51,7 +51,7 @@ safe:['🛡 Safety',`<b>Safety score (0–100)</b> takes points off for: the cre
 • <code>maxCreatorLaunches</code>: skip creators who launch many coins. <i>1</i>
 • <code>fastPostMinScore</code>: fast-mode buys sell if the after-check is below this. <i>40</i>
 • <code>fastPostCheckSec</code>: seconds after a fast buy to check. <i>8</i>
-• <code>alerts</code> on|off: send new-token alerts. <i>on</i>
+• <code>alerts</code> all|trades|score|off: <b>trades</b> = only tell me about coins it buys, <b>score</b> = coins that pass safety + potential, <b>all</b> = everything it checks. <i>trades</i> · e.g. <code>/set alerts score</code>
 Only YOUR Telegram account can control this bot.`],
 wallet:['👛 Wallets & burners',`A <b>burner</b> is a throwaway wallet only this bot uses. Keep small amounts in it.
 /wallet: active burner address + balance
@@ -73,8 +73,11 @@ profit:['💰 Profit',`Every night at 23:55 WAT the bot can send profit (balance
 • <code>profitReserveSol</code>: SOL kept for fees. <i>0.003</i>
 A preview is always shown first. In test mode nothing is sent.`],
 test:['🧪 Testing & stats',`/pnl: total profit/loss, wins, losses, win rate
-/stats: results by tier and score, plus suggested better settings
+/stats: dashboard with buttons. <b>Overview</b> (today/all-time, win rate bar, PnL), <b>Hunting</b> (sources, skip reasons, speed), <b>Trades</b> (by tier, best/worst, last 5), <b>Wallet</b> (balance, capital, profit, open positions)
 /positions: open trades
+👀 <b>Missed pumps</b>: the bot keeps watching coins it skipped (up to 6h) and tells you if one goes 2x / 5x / 10x, with why it skipped it. See /stats → Missed for skip accuracy.
+• <code>missedAlerts</code> on|off: send missed-pump alerts. <i>on</i>
+• <code>missedAlertPct</code>: first alert at this % gain. <i>100</i> (= 2x)
 • <code>autotune</code> on|off: auto-apply the suggested settings once there's enough data (100+ coins). <i>off</i>
 • <code>trailingPct</code>: extra trailing stop for any trade (0 = off). <i>0</i>
 Tip: run in test mode (/paper on) for a few days, check /stats, adjust with /set, THEN go live.`]};

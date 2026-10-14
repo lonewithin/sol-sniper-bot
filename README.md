@@ -41,7 +41,7 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 
 - The bot re-checks every 10s and exits early if potential drops below `momentumExit` (20).
 - Buy size scaling is set by `sizeByPotential` and is always capped by `maxPerTrade` and `maxDailySol`.
-- `/strategy` shows the live rules. Every value can be changed with `/set`.
+- `/strategy` shows the live rules. `/set alerts all|trades|score|off` controls alert noise (default `trades` = only coins it buys). Every value can be changed with `/set`.
 
 ## Learning: logs, /stats, tune, replay
 - `data/trades.jsonl` gets every closed trade. `data/observations.jsonl` gets every scanned token's features, plus its price change at +1, +5, +15 and +30 minutes.
@@ -57,6 +57,16 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - `/set autoSweep on|off` (default on). In Manual mode the nightly send is skipped and you get a reminder at 23:55 instead.
 - Safety: the address is validated, there's at most one automatic sweep per day, the balance never drops below capital, and a preview is sent before every send. The amount is re-checked just before sending and is never more than the preview showed.
 - `/sweep` sends now, after a confirm button. In paper mode it only reports.
+
+## Missed pumps & /stats dashboard
+- `/stats` is a dashboard with buttons:
+  - **Overview:** uptime, mode, today and all-time counts, win-rate bar, PnL, average hold.
+  - **Hunting:** coins per source, top skip reasons, average scores, fastest buy speed.
+  - **Trades:** results by tier, best and worst trade, last 5.
+  - **Wallet:** balance, capital, sweepable profit, open positions.
+  - **Missed:** coins it skipped that pumped.
+- The bot keeps watching skipped coins (the last 300, for up to 6h). If one reaches +`missedAlertPct` (default 100% = 2x), and again at 5x and 10x, it alerts you once per level with why it skipped the coin. Turn this off with `/set missedAlerts off`.
+- Finished watches go to `data/missed.jsonl`. `npm run tune` reports which skip reasons let the most 2x+ coins get away.
 
 ## Rotating burners
 - Every burner is kept in one encrypted vault, `data/vault.enc` (AES-256-GCM).

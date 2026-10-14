@@ -11,4 +11,6 @@ function tune(minN=20){const obs=L.observations().filter(o=>o.out&&o.out.m1!=nul
 function stats(){const t=L.trades();const g={};const add=(k,x)=>{(g[k]??={n:0,w:0,sum:0});g[k].n++;g[k].sum+=x.pnlPct;if(x.pnl>0)g[k].w++};
  for(const x of t){add('tier '+x.tier,x);add('safety '+Math.floor((x.safety||0)/10)*10+'s',x);add('pot '+Math.floor((x.pot||0)/10)*10+'s',x)}
  return Object.entries(g).sort().map(([k,v])=>`${k}: ${v.n} trades · win ${(v.w/v.n*100).toFixed(0)}% · avg ${(v.sum/v.n).toFixed(1)}%`);}
-module.exports={tune,stats,evaluate,tierOf};
+function missedReport(){const fs=require('fs');let r=[];try{r=fs.readFileSync(require('./missed').OUT,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse)}catch{}
+ const out={n:r.length,byWhy:{}};for(const x of r){const k=x.why||'?';const b=(out.byWhy[k]??={n:0,pumped:0});b.n++;if(x.peakPct>=100)b.pumped++}return out;}
+module.exports={missedReport,tune,stats,evaluate,tierOf};
