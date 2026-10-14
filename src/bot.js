@@ -12,7 +12,8 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML',reply_markup:stratKb()}));
  bot.callbackQuery('pf:menu',async c=>{c.answerCallbackQuery();c.reply(...await profitMenu())});
- bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
+ require('./setmenu').install(bot);
+ bot.command('set',c=>{if(!c.match.trim())return require('./setmenu').open(c);const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
   if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
   if(k==='secondChance'){S.secondChance=/^(on|true|1)$/i.test(v);save();return c.reply('secondChance = '+S.secondChance)}
   if(k==='missedAlerts'){S.missedAlerts=/^(on|true|1)$/i.test(v);save();return c.reply('missedAlerts = '+S.missedAlerts)}

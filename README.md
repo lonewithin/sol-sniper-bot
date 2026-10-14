@@ -99,6 +99,10 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - In paper mode, rotating only creates the wallet and moves nothing.
 - ⚠️ **Privacy:** rotation makes tracking harder but doesn't stop it. A sweep is an on-chain transfer, so it **links** the old and new wallet. For better separation, skip the sweep and fund each new burner manually from a different source (e.g. straight from an exchange withdrawal), then withdraw the old one elsewhere.
 
+## Settings menu
+- Bare `/set` opens a button menu: category → setting → explanation, current value, default, quick picks, **Type a value** (validated) and **Reset to default**. Toggles flip with one tap. `/set key value` still works.
+- `/reset` (asks to confirm) restores the defaults. It keeps wallets, the vault, capital, the profit address and trade history, and leaves auto and paper ON.
+
 ## Commands (owner only, set by `OWNER_ID`)
 `/settings` `/set <key> <n>` (buySol, maxPerTrade, maxDailySol, minScore, slippageBps, priorityLamports, tpPct, slPct, trailingPct, maxOpen, minLiqUsd) · `/auto on|off` · `/paper on|off` · `/check <mint>` · `/positions` `/pnl` `/sellall` `/panic` · `/wallet` · `/burners` · `/newburner` · `/export [n|all] CONFIRM` · `/withdraw <addr> <amt|all>` · `/strategy` · `/stats` · `/set mode fast|safe`
 

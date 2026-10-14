@@ -6,4 +6,4 @@ const defaults={auto:false,paper:process.env.PAPER!=='false',minScore:70,buySol:
 let s={...defaults};try{s={...defaults,...JSON.parse(fs.readFileSync(SF))}}catch{}
 if(typeof s.alerts==='boolean')s.alerts=s.alerts?'trades':'off';
 const save=()=>fs.writeFileSync(SF,JSON.stringify(s,null,1));
-module.exports={DATA,settings:s,save,RPC:process.env.RPC_URL||'https://api.mainnet-beta.solana.com',OWNER:Number(process.env.OWNER_ID||0),SOL:'So11111111111111111111111111111111111111112'};
+module.exports={defaults,DATA,settings:s,save,RPC:process.env.RPC_URL||'https://api.mainnet-beta.solana.com',OWNER:Number(process.env.OWNER_ID||0),SOL:'So11111111111111111111111111111111111111112'};

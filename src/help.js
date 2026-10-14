@@ -14,7 +14,9 @@ It watches for brand-new Solana tokens, gives each one a <b>safety score</b> (ho
 
 <b>Basic commands</b>
 /start: say hi · /help: this guide · /settings: all current settings
-/set &lt;name&gt; &lt;value&gt;: change a setting, e.g. <code>/set buySol 0.02</code>`],
+/set: <b>tap-to-change settings menu</b> (categories → setting → quick picks, type a value, or reset to default)
+/set &lt;name&gt; &lt;value&gt;: change one directly, e.g. <code>/set buySol 0.02</code>
+/reset: put all settings back to defaults (keeps wallets, capital, profit address, history)`],
 buy:['🛒 Buying',`/auto on|off: let the bot buy by itself. <i>Default: off</i>
 /paper on|off: on = test mode, fake trades. off = LIVE, real SOL. <i>Default: on</i>
 /check &lt;token address&gt;: score any token now, with Buy buttons
@@ -102,5 +104,5 @@ const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Beginner guide'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['pnl','Profit & win rate'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Change a setting']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Beginner guide'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['pnl','Profit & win rate'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};
