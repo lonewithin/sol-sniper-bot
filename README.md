@@ -43,6 +43,12 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - Buy size scaling is set by `sizeByPotential` and is always capped by `maxPerTrade` and `maxDailySol`.
 - `/strategy` shows the live rules. `/set alerts all|trades|score|off` controls alert noise (default `trades` = only coins it buys). Every value can be changed with `/set`.
 
+## Trailing rules
+- For SECOND, RUNNER and BIG trades the trailing stop only switches on after a gain of `trailArmPct` (30%) or after `trailGraceMin` (3 min). The hard stop loss stays active during that wait.
+- Trail size is set per strategy: `swingTrail`, `runnerTrail`, `secondChanceTrail`, `bigTrail`.
+- After a partial take-profit the stop moves to breakeven.
+- Sell messages explain the exit in plain words.
+
 ## Learning: logs, /stats, tune, replay
 - `data/trades.jsonl` gets every closed trade. `data/observations.jsonl` gets every scanned token's features, plus its price change at +1, +5, +15 and +30 minutes.
 - `/stats` shows win rate and average PnL by tier, safety bucket and potential bucket.

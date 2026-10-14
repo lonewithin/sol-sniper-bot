@@ -42,6 +42,11 @@ sell:['📈 Selling & tiers',`The bot picks a <b>tier</b> from the potential sco
 • <code>momentumExit</code>: sell early if potential drops below this. <i>20</i>
 • <code>fastMaxMin</code>: max hold for fast-mode buys. <i>5</i>
 <i>Trailing</i> = it sells once the price falls that % from its highest point.
+• <code>trailArmPct</code>: for SECOND/RUNNER/BIG the trailing stop only switches on after the coin is up this %. <i>30</i>
+• <code>trailGraceMin</code>: …or after this many minutes. The normal stop loss still protects you meanwhile. <i>3</i>
+• Trail size per strategy: <code>swingTrail</code> 15 · <code>runnerTrail</code> 20 · <code>secondChanceTrail</code> 20 · <code>bigTrail</code> 25
+• After a partial take-profit, the stop moves to <b>breakeven</b>, so the rest can't turn into a loss.
+Every sell message explains the exit in plain words.
 
 /strategy: the live rules · /positions: what you hold
 /sellall: sell everything · /panic: auto OFF + sell everything`],
