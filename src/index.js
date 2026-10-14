@@ -22,6 +22,6 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   if(S.alerts)bot.api.sendMessage(OWNER,`🆕 ${t.src} · <b>${m.tier}</b> potential ${m.potential}/100\n`+fmt(d)+'\n<i>'+m.reasons.join(' · ')+'</i>',{parse_mode:'HTML',reply_markup:kb(d.mint),link_preview_options:{is_disabled:true}}).catch(()=>{});
   if(S.auto&&m.tier!=='SKIP'&&(d.liqUsd||0)>=S.minLiqUsd){try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:m.f});maybeRotate().catch(()=>{})}catch(e){console.log('buy skip',e.message)}}
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
-setInterval(()=>T.monitor(),10000);
+setInterval(()=>T.monitor(),10000);require('./sweep').schedule(say);
 setInterval(()=>{if(!S.autotune)return;const r=tune(50);if(r.nObs>=100&&r.best.avg>r.current.avg){Object.assign(S,{minScore:r.best.minScore,potScalp:r.best.potScalp,potSwing:r.best.potSwing,potRunner:r.best.potRunner});save();say(`🧠 Autotune applied: ${JSON.stringify(r.best)}`)}},3600000);sc.start();bot.start({onStart:()=>say('🤖 Sniper online ('+(S.paper?'paper':'LIVE')+', auto '+(S.auto?'ON':'OFF')+')')});
 process.on('SIGINT',()=>{sc.stop();bot.stop();process.exit()});

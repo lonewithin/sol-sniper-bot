@@ -49,6 +49,12 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - `npm run tune` searches thresholds for the best simulated expectancy. It applies nothing unless `/set autotune on`, and even then only with 100+ observations.
 - `npm run replay` runs the current rules over the logged observations offline. The simulation is coarse, because it only sees prices at those 4 checkpoints.
 
+## Daily profit sweep
+- Every day at **23:55 Africa/Lagos** the bot sends realized profit to `profitAddress`. The default is `3mvvn7sLrjo8VGNcYUsGA9HnyA4rVg3LGqZawvWLx1MR`; change it with `/set profitAddress <addr>`.
+- Profit = burner SOL balance − `capital` − `profitReserveSol` (0.003). Only SOL moves; open token positions are never touched.
+- Set your working capital first: `/set capital 0.5`. If it isn't set, the sweep is skipped.
+- `/sweep` sweeps now, after a confirm button. In paper mode it only reports what it would send. Turn the daily sweep off with `/set profitSweep off`.
+
 ## Rotating burners
 - Every burner is kept in one encrypted vault, `data/vault.enc` (AES-256-GCM).
 - `/newburner` creates a new wallet, sweeps the SOL into it (and SPL tokens if `/set sweepTokens on`), and makes it active. The bot then DMs you the new key as a spoiler that **deletes after 60s**. **Save it offline.**

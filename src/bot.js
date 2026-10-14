@@ -2,11 +2,12 @@ const {Bot,InlineKeyboard}=require('grammy');const {settings:S,save,OWNER}=requi
 function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.use((ctx,next)=>ctx.from?.id===OWNER?next():undefined); // owner-only, silently ignore others
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
- bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /export'));
+ bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /sweep /set capital SOL /export'));
  bot.command('auto',c=>{S.auto=/on/i.test(c.match);save();c.reply(`Auto-snipe ${S.auto?'ON':'OFF'} (${S.paper?'PAPER':'LIVE'})`)});
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML'}));
  bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
+  if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');let ok=false;try{ok=PublicKey.isOnCurve(new PublicKey(v).toBytes())}catch{}if(!ok)return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
   if(k==='mode'){if(!['fast','safe'].includes(v))return c.reply('mode fast|safe');S.mode=v;save();return c.reply('mode = '+v+(v==='fast'?' ⚡ (instant checks only before buy, full checks after)':''))}
   if(typeof S[k]==='boolean'){if(['auto','paper'].includes(k))return c.reply('Use /'+k);S[k]=/^(on|true|1)$/i.test(v);save();return c.reply(`${k} = ${S[k]}`)}const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
   if(k==='buySol'&&n>S.maxPerTrade)return c.reply(`buySol > maxPerTrade (${S.maxPerTrade})`);S[k]=n;save();c.reply(`${k} = ${n}`)});
@@ -29,6 +30,10 @@ Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume a
 • RUNNER (pot ≥ ${S.potRunner}): sell 50% at +${S.runnerPartialAt}%, trail ${S.runnerTrail}% rest · SL -${S.runnerSl}% · max ${S.runnerMaxMin}m · size ×1.5
 Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling ${S.sizeByPotential?'ON':'OFF'} (always capped at ${S.maxPerTrade} SOL/trade, ${S.maxDailySol}/day). Autotune ${S.autotune?'ON':'OFF'}.`));
  bot.command('stats',c=>{const r=require('./tune');const l=r.stats();const t=r.tune(20);c.reply((l.length?l.join('\n'):'No closed trades yet')+`\n\nObservations: ${t.nObs}\nSuggested: minScore ${t.best.minScore}, scalp ${t.best.potScalp}, swing ${t.best.potSwing}, runner ${t.best.potRunner} (sim avg ${t.best.avg.toFixed(1)}% over ${t.best.n})`)});
+ bot.command('sweep',async c=>{const SW=require('./sweep');const {bal,amt}=await SW.plan();
+  c.reply(`Sweep now? Balance ${bal.toFixed(4)} SOL, capital ${S.capital}, reserve ${S.profitReserveSol}\n→ ${amt} SOL to <code>${S.profitAddress}</code>${S.paper?' [paper: report only]':''}`,{parse_mode:'HTML',reply_markup:new InlineKeyboard().text('✅ Confirm sweep','sw:go').text('❌ Cancel','sw:no')})});
+ bot.callbackQuery('sw:no',c=>c.editMessageText('Cancelled'));
+ bot.callbackQuery('sw:go',async c=>{await c.editMessageText('Sweeping…');require('./sweep').run(say,'manual').catch(e=>say('❌ '+e.message))});
  bot.command('positions',c=>c.reply(T.st.open.length?T.st.open.map(p=>`${p.symbol} ${p.tier||''} pot ${p.potNow??p.pot??'-'} ${p.solIn} SOL → ${(p.last??p.solIn).toFixed(4)} ${p.paper?'[paper]':''}\n<code>${p.mint}</code>`).join('\n\n'):'No open positions',{parse_mode:'HTML'}));
  bot.command('pnl',c=>{const a=T.stats();c.reply(`📊 PnL (incl. paper)\nTrades: ${a.n} · ✅ ${a.wins} · 🔻 ${a.losses} · Win rate ${a.winRate.toFixed(1)}%\nSOL in ${a.solIn.toFixed(4)} → out ${a.solOut.toFixed(4)}\nTotal: ${a.pnl>=0?'+':''}${a.pnl.toFixed(5)} SOL (${a.pnlPct.toFixed(1)}%)\nOpen: ${T.st.open.length}`)});
  const pend=new Map();
