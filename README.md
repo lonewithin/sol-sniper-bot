@@ -26,6 +26,15 @@ Defaults: buy 0.02 SOL, max 0.1 SOL per trade, 0.2 SOL per day, TP 50%, SL 25%, 
 - `/wallet` shows only the public address. `/export CONFIRM` (DM only) sends the key as a spoiler and deletes it after 60 seconds.
 - Optional: put an existing burner's base58 key in `BURNER_PRIVATE_KEY` in `.env`. Never commit `.env`.
 
+## Withdraw
+`/withdraw <address> <amount|all>`: owner only. It checks the address, shows a Confirm/Cancel button, and for `all` keeps a small fee reserve. In paper mode it only replies with a message and sends nothing.
+
+## Import the /export key into Phantom or Solflare
+1. Send `/export CONFIRM` to the bot in a DM, tap the spoiler and copy the base58 key. The message deletes itself after 60 seconds.
+2. **Phantom:** menu → Add / Connect Wallet → **Import Private Key** → name it "Burner" → paste → Import.
+3. **Solflare:** Add wallet → **Import private key** (under "I already have a wallet" / Advanced) → paste → Continue.
+4. Check that the address matches `/wallet`. Then clear your clipboard, and keep this burner apart from your main wallets.
+
 ## Run
 ```bash
 npm install
