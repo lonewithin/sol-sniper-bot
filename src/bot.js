@@ -2,7 +2,8 @@ const {Bot,InlineKeyboard}=require('grammy');const {settings:S,save,OWNER}=requi
 function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.use((ctx,next)=>ctx.from?.id===OWNER?next():undefined); // owner-only, silently ignore others
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
- bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));
+ require('./help').install(bot);
+ bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));
  bot.command('auto',c=>{S.auto=/on/i.test(c.match);save();c.reply(`Auto-snipe ${S.auto?'ON':'OFF'} (${S.paper?'PAPER':'LIVE'})`)});
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML',reply_markup:new InlineKeyboard().text('💰 Profit / sweep menu','pf:menu')}));
