@@ -13,7 +13,7 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
 // FAST buy via PumpPortal (bonding curve / PumpSwap). Returns position. Latency logged from detection time tDetect.
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  sol=+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(spent+sol>S.maxDailySol)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG').length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
+ if(spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG').length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -31,10 +31,10 @@ async function pumpSell(p,pct){const kp=W.load();const bytes=await F.build(kp.pu
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
  const r=rules(tier)||rules('SWING');
  if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?Math.max(S.maxPerTrade,S.bigBuySol):S.maxPerTrade).toFixed(4);const big=tier==='BIG';const dk=(big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=big?S.bigMaxDailySol:S.maxDailySol;
- if(spent+sol>cap)throw new Error(`daily cap ${cap} SOL reached`);
+ if(spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
  if(st.open.filter(p=>(p.tier==='BIG')===big).length>=(big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
- const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=spent+sol;
+ const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=+(spent+sol).toFixed(6);
  const decimals=await dec(tok.mint);const entry=sol/(Number(q.outAmount)/10**decimals);
  const p={mint:tok.mint,symbol:tok.symbol||'?',solIn:sol,tokens:q.outAmount,tokens0:q.outAmount,realized:0,decimals,entry,peak:0,opened:Date.now(),sig,paper:S.paper,manual,tier,rules:r,pot,safety,features};st.open.push(p);save();W.countTrade();
  notify(`<b>${label(p)}</b>\n🟢 BUY ${p.symbol}${manual?' (manual)':''}${p.paper?' [paper]':''}\nSOL in: ${sol} · potential ${pot??'-'} · safety ${safety??'-'}\nEntry: ${fp(entry)} SOL/token\nPlan: ${r.tp?'TP +'+r.tp+'% ':''}${r.partialAt?'sell 50% at +'+r.partialAt+'% ':''}SL -${r.sl}%${r.trail?' trail '+r.trail+'%':''} max ${r.maxMin}m\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
