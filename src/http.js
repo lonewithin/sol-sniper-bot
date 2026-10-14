@@ -1,0 +1,1 @@
+module.exports=async function j(url,opt={},ms=8000){const r=await fetch(url,{...opt,signal:AbortSignal.timeout(ms),headers:{'content-type':'application/json','user-agent':'sol-sniper-bot',...(opt.headers||{})}});if(!r.ok)throw new Error(r.status+' '+url.split('?')[0]);return r.json();};
