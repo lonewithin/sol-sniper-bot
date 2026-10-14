@@ -53,7 +53,10 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - Every day at **23:55 Africa/Lagos** the bot sends realized profit to `profitAddress`. The default is `3mvvn7sLrjo8VGNcYUsGA9HnyA4rVg3LGqZawvWLx1MR`; change it with `/set profitAddress <addr>`.
 - Profit = burner SOL balance − `capital` − `profitReserveSol` (0.003). Only SOL moves; open token positions are never touched.
 - Set your working capital first: `/set capital 0.5`. If it isn't set, the sweep is skipped.
-- `/sweep` sweeps now, after a confirm button. In paper mode it only reports what it would send. Turn the daily sweep off with `/set profitSweep off`.
+- `/profit` menu shows the mode (Auto daily 23:55 WAT or Manual), the profit address, today's realized PnL and how much can be swept, with **[Switch Auto/Manual]** and **[Send now]** buttons. `/settings` has a button to open it.
+- `/set autoSweep on|off` (default on). In Manual mode the nightly send is skipped and you get a reminder at 23:55 instead.
+- Safety: the address is validated, there's at most one automatic sweep per day, the balance never drops below capital, and a preview is sent before every send. The amount is re-checked just before sending and is never more than the preview showed.
+- `/sweep` sends now, after a confirm button. In paper mode it only reports.
 
 ## Rotating burners
 - Every burner is kept in one encrypted vault, `data/vault.enc` (AES-256-GCM).
