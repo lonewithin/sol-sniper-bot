@@ -2,18 +2,26 @@ const {Bot,InlineKeyboard}=require('grammy');const {settings:S,save,OWNER}=requi
 function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.use((ctx,next)=>ctx.from?.id===OWNER?next():undefined); // owner-only, silently ignore others
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
- bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /export'));
+ bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /export'));
  bot.command('auto',c=>{S.auto=/on/i.test(c.match);save();c.reply(`Auto-snipe ${S.auto?'ON':'OFF'} (${S.paper?'PAPER':'LIVE'})`)});
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML'}));
  bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
+  if(k==='mode'){if(!['fast','safe'].includes(v))return c.reply('mode fast|safe');S.mode=v;save();return c.reply('mode = '+v+(v==='fast'?' ⚡ (instant checks only before buy, full checks after)':''))}
   if(typeof S[k]==='boolean'){if(['auto','paper'].includes(k))return c.reply('Use /'+k);S[k]=/^(on|true|1)$/i.test(v);save();return c.reply(`${k} = ${S[k]}`)}const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
   if(k==='buySol'&&n>S.maxPerTrade)return c.reply(`buySol > maxPerTrade (${S.maxPerTrade})`);S[k]=n;save();c.reply(`${k} = ${n}`)});
  bot.command('wallet',async c=>c.reply(`Burner (${W.source()}): <code>${W.pub()}</code>\nBalance: ${await T.balance().catch(()=>'?')} SOL\nFund with SMALL amounts only.`,{parse_mode:'HTML'}));
- bot.command('export',async c=>{if(c.chat.type!=='private')return c.reply('DM only');
-  if(c.match.trim()!=='CONFIRM')return c.reply('This reveals the burner private key. Send: /export CONFIRM — message self-deletes in 60s.');
-  const m=await c.reply(`🔐 Burner key (save offline, then this deletes in 60s):\n<tg-spoiler>${W.exportSecret()}</tg-spoiler>`,{parse_mode:'HTML'});
-  setTimeout(()=>{c.api.deleteMessage(c.chat.id,m.message_id).catch(()=>{});c.deleteMessage().catch(()=>{})},60000);});
+ const {rotate}=require('./rotate');
+ const sendKey=async(chat,i,note='')=>{const w=W.list()[i];const m=await bot.api.sendMessage(chat,`🔐 Burner #${i} ${w.pub}${note}\nPrivate key (base58 · Phantom/Solflare → Import Private Key). SAVE IT OFFLINE NOW — this message deletes in 60s:\n<tg-spoiler>${W.exportSecret(i)}</tg-spoiler>`,{parse_mode:'HTML'});setTimeout(()=>bot.api.deleteMessage(chat,m.message_id).catch(()=>{}),60000);};
+ bot.sendNewBurner=async r=>{await say(`🔄 Rotated burner → #${r.index} <code>${r.to}</code>${r.paper?'\n[paper] nothing swept — move any funds manually':`\nSOL sweep: ${r.solSig||'none'} · token sweeps: ${r.tokenSigs.length}`}`);await sendKey(OWNER,r.index,' (new)');};
+ bot.command('export',async c=>{if(c.chat.type!=='private')return c.reply('DM only');const [a,b]=c.match.trim().split(/\s+/);const conf=b==='CONFIRM'||a==='CONFIRM';
+  if(!conf)return c.reply('Reveals private keys. Send: /export CONFIRM (active) · /export <n> CONFIRM · /export all CONFIRM. Each message deletes in 60s.');
+  const L=W.list();const ids=a==='all'?L.map(x=>x.i):a==='CONFIRM'?[W.activeIndex()]:[Number(a)];
+  for(const i of ids){if(!L[i])return c.reply('No burner #'+i);await sendKey(c.chat.id,i)}setTimeout(()=>c.deleteMessage().catch(()=>{}),60000);});
+ bot.command('burners',async c=>{const {conns}=require('./send');const L=W.list();const bals=await Promise.all(L.map(w=>conns[0].getBalance(new (require('@solana/web3.js').PublicKey)(w.pub)).then(x=>(x/1e9).toFixed(4)).catch(()=>'?')));
+  c.reply(L.map((w,i)=>`${w.active?'⭐':'•'} #${i} <code>${w.pub}</code> ${bals[i]} SOL · ${w.trades} trades · ${w.label}`).join('\n')+`\nAuto-rotate: every ${S.rotateEveryTrades||'∞'} trades${S.rotateDaily?' + daily':''}`,{parse_mode:'HTML'})});
+ bot.command('newburner',async c=>{if(T.st.open.some(p=>!p.paper)&&!S.sweepTokens)return c.reply('Open live positions in current burner — /sellall first, or /set sweepTokens on');
+  await c.reply(S.paper?'[paper] Creating new burner (no funds moved)…':'Creating new burner and sweeping funds…');try{const r=await rotate();await bot.sendNewBurner(r)}catch(e){c.reply('❌ '+e.message)}});
  bot.command('strategy',c=>c.reply(`🧭 Strategy
 Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume accel + price m5 + liq Δ + holder Δ + activity + safety.
 • SCALP (pot ≥ ${S.potScalp}): TP +${S.scalpTp}% · SL -${S.scalpSl}% · max ${S.scalpMaxMin}m · size ×0.6
