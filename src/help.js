@@ -98,6 +98,7 @@ Both also need /auto on. /settings has buttons for both.
 👀 <b>Missed pumps</b>: the bot keeps watching coins it skipped (up to 6h) and tells you if one goes 2x / 5x / 10x, with why it skipped it. See /stats → Missed for skip accuracy.
 • <code>missedAlerts</code> on|off: send missed-pump alerts. <i>on</i>
 • <code>missedAlertPct</code>: first alert at this % gain. <i>100</i> (= 2x)
+It only counts a real market: mcap ≥ <code>missedMinMcap</code> $10k, liquidity ≥ <code>missedMinLiq</code> $5k (bonding-curve coins use mcap + volume), volume ≥ <code>missedMinVol5m</code> $200/5m or <code>missedMinVol1h</code> $2k/1h. The price is measured on one pool, and the start price only counts from a pool with ≥ <code>missedBaseLiq</code> $1k liquidity. Second-chance buys use the same check.
 • <code>autotune</code> on|off: auto-apply the suggested settings once there's enough data (100+ coins). <i>off</i>
 • <code>trailingPct</code>: extra trailing stop for any trade (0 = off). <i>0</i>
 Tip: run in test mode (/paper on) for a few days, check /stats, adjust with /set, THEN go live.`]};

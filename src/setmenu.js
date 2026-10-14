@@ -10,7 +10,7 @@ const META={
  'Second chance':{secondChance:['Re-enter skipped coins that pump',B],secondChanceMinScore:['Lowest safety allowed',[40,45,55]],secondChanceSize:['× normal buy size',[0.3,0.5,1]],secondChanceSl:['Stop loss %',[10,15,20]],secondChanceGainPct:['Must have run this % since skip',[30,50,100]],secondChanceMinRatio:['Min 5m buys÷sells',[1.2,1.3,1.6]]},
  Profit:{autoSweep:['Auto send profit nightly 23:55 WAT',B],capital:['Working capital SOL (never swept)',[0.1,0.3,0.5,1]],profitAddress:['Wallet that receives profit','text'],profitReserveSol:['SOL kept for fees',[0.002,0.003,0.01]]},
  Wallet:{rotateEveryTrades:['New burner every N trades (0=off)',[0,10,25,50]],rotateDaily:['New burner every day',B],sweepTokens:['Also move tokens when rotating',B]},
- Alerts:{alerts:['Which coins to alert on',['trades','score','all','off']],missedAlerts:['Alert when skipped coins pump',B],missedAlertPct:['First missed alert at gain %',[50,100,200]],autotune:['Auto-apply tuned thresholds',B]}};
+ Alerts:{alerts:['Which coins to alert on',['trades','score','all','off']],missedAlerts:['Alert when skipped coins pump',B],missedAlertPct:['First missed alert at gain %',[50,100,200]],missedMinMcap:['Missed pump only counts if mcap ≥ $',[5000,10000,25000]],missedMinLiq:['…and liquidity ≥ $',[2000,5000,10000]],missedMinVol1h:['…and 1h volume ≥ $ (or 5m ≥ missedMinVol5m)',[1000,2000,5000]],missedMinVol5m:['5m volume floor $',[100,200,500]],missedBaseLiq:['Ignore skip prices from pools under $ liq',[500,1000,2000]],autotune:['Auto-apply tuned thresholds',B]}};
 const catOf=k=>Object.keys(META).find(c=>k in META[c]);
 const fmt=v=>typeof v==='boolean'?(v?'ON ✅':'OFF ⛔'):String(v);
 const short=v=>{v=fmt(v);return v.length>10?v.slice(0,4)+'…'+v.slice(-4):v};

@@ -32,7 +32,7 @@ MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return
  const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
  const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);
  if((f.ratio||0)<S.secondChanceMinRatio)fails.push(`buy/sell ${f.ratio}`);if((f.accel||0)<1)fails.push(`volume not rising x${f.accel}`);
- if((d.liqUsd||0)<S.minLiqUsd)fails.push('liq $'+(d.liqUsd||0).toFixed(0));if(f.hGrow<0)fails.push(`holders falling ${f.hGrow}%`);
+ if((d.liqUsd||0)<S.minLiqUsd)fails.push('liq $'+(d.liqUsd||0).toFixed(0));{const q=MP.quality(pair);if(q.length)fails.push('market not real: '+q.join(', '))}if(f.hGrow<0)fails.push(`holders falling ${f.hGrow}%`);
  console.log(`[2nd] ${w.symbol} +${gain.toFixed(0)}% S${d.score} ${fails.length?'no: '+fails.join('; '):'BUY'}`);
  if(fails.length){CT.skip('2nd chance: '+fails[0].split(/[ :]/)[0]);return false}
  try{await T.buy({mint:w.mint,symbol:d.symbol},S.buySol,{tier:'SECOND',pot:m.potential,safety:d.score,features:{...f,gainSinceSkip:+gain.toFixed(1),skipWhy:w.why}});CT.bought();return true}catch(e){console.log('2nd buy skip',e.message);return false}});
