@@ -19,7 +19,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   console.log(`[S${d.score} P${m.potential} ${m.tier}] ${d.symbol} ${t.mint} ${t.src}`);
   L.observe({mint:t.mint,symbol:d.symbol,src:t.src,safety:d.score,pot:m.potential,tier:m.tier,f:m.f,p0:d.priceUsd||null});
   CT.scanned(t.src,d.score,m.potential);
-  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':!S.auto?'auto off':!S.snipe?'snipe off':null;
+  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':(m.tier!=='RUNNER'&&(m.f?.pc5??0)<S.minEntryPc5)?'dumping (m5 < '+S.minEntryPc5+'%)':(m.f?.v5??0)<S.minEntryVol5m?'low 5m volume':!S.auto?'auto off':!S.snipe?'snipe off':null;
   const card=()=>{CT.alerted();return bot.api.sendMessage(OWNER,`🆕 ${t.src} · <b>${m.tier}</b> potential ${m.potential}/100\n`+fmt(d)+'\n<i>'+m.reasons.join(' · ')+'</i>',{parse_mode:'HTML',reply_markup:kb(d.mint),link_preview_options:{is_disabled:true}}).catch(()=>{})};
   if(S.alerts==='all'&&!((d.liqUsd||0)<S.minLiqUsd&&d.score<S.minScore))card();
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
@@ -27,7 +27,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:m.f});CT.bought();maybeRotate().catch(()=>{})}
   catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
-setInterval(()=>T.monitor(),10000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));
+let monBusy=false;setInterval(async()=>{if(monBusy)return;monBusy=true;try{await T.monitor()}catch(e){console.log('monitor err',e.message)}finally{monBusy=false}},(S.monitorSec||5)*1000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));
 MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return false;
  const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
  const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);

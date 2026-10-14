@@ -36,8 +36,8 @@ Alerts have <b>Buy 0.02 / Buy 0.05</b> buttons for a manual buy.
 • <code>fastNewLaunches</code> on|off: fast-buy brand-new launches (very risky). <i>off</i>
 • <code>jitoTipLamports</code>: optional Jito tip for speed. <i>0</i>`],
 sell:['📈 Selling & tiers',`The bot picks a <b>tier</b> from the potential score:
-• <b>SCALP</b> (≥ <code>potScalp</code> 35): quick in/out. Take profit +<code>scalpTp</code> 20%, stop loss −<code>scalpSl</code> 12%, max <code>scalpMaxMin</code> 4 min
-• <b>SWING</b> (≥ <code>potSwing</code> 55): TP +<code>swingTp</code> 50%, SL −<code>swingSl</code> 20%, trailing <code>swingTrail</code> 15%, max <code>swingMaxMin</code> 15 min
+• <b>SCALP</b> (≥ <code>potScalp</code> 42): quick in/out. Take profit +<code>scalpTp</code> 20%, stop loss −<code>scalpSl</code> 12%, max <code>scalpMaxMin</code> 4 min
+• <b>SWING</b> (≥ <code>potSwing</code> 55): TP +<code>swingTp</code> 50%, SL −<code>swingSl</code> 18%, trailing <code>swingTrail</code> 15%, max <code>swingMaxMin</code> 15 min
 • <b>RUNNER</b> (≥ <code>potRunner</code> 75): sells half at +<code>runnerPartialAt</code> 50%, trails the rest by <code>runnerTrail</code> 20%, SL −<code>runnerSl</code> 25%, max <code>runnerMaxMin</code> 30 min
 • <code>momentumExit</code>: sell early if potential drops below this. <i>20</i>
 • <code>fastMaxMin</code>: max hold for fast-mode buys. <i>5</i>
@@ -55,6 +55,8 @@ safe:['🛡 Safety',`<b>Safety score (0–100)</b>. ⛔ <b>HARD</b> blockers (ne
 ⚠️ No score can promise a coin won't rug.
 
 • <code>minScore</code>: lowest safety score allowed to buy. <i>70</i>
+• <code>minEntryPc5</code>: skip coins already falling more than this in the last 5 min (RUNNER exempt). <i>-5</i>
+• <code>minEntryVol5m</code>: skip coins with under this much $ volume in the last 5 min. <i>1000</i>
 • <code>minLiqUsd</code>: lowest liquidity in $ to buy or alert. <i>5000</i>
 • <code>fastMaxDevPct</code>: fast mode skips if the dev bought more than this %. <i>10</i>
 • <code>maxCreatorLaunches</code>: skip creators who launch many coins. <i>1</i>
