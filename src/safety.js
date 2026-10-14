@@ -16,6 +16,7 @@ async function score(mint,hint={}){
  const pairs=Array.isArray(dex.value)?dex.value:[];const p=pairs.sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
  if(p){d.name=p.baseToken?.name;d.symbol=p.baseToken?.symbol;d.liqUsd=p.liquidity?.usd||0;d.mcap=p.marketCap||p.fdv;d.dex=p.dexId;d.priceUsd=+p.priceUsd;d.ageMin=p.pairCreatedAt?((Date.now()-p.pairCreatedAt)/6e4)|0:null;}
  else if(hint.name){d.name=hint.name;d.symbol=hint.symbol}
+ if(!d.symbol||d.symbol==='undefined')d.symbol=hint.symbol||d.name||hint.name||(mint.slice(0,4)+'…'+mint.slice(-4));if(!d.name)d.name=d.symbol;
  const liq=d.liqUsd||0;
  if(liq<2000)pen(25,`Liquidity tiny ($${liq.toFixed(0)})`);else if(liq<10000)pen(10,`Liquidity low ($${liq.toFixed(0)})`);else ok(`Liquidity $${liq.toFixed(0)}`);
  const r=rug.value;const pools=new Set((r?.markets||[]).flatMap(m=>[m.liquidityA,m.liquidityB,m.pubkey].filter(Boolean)));

@@ -1,3 +1,7 @@
+process.on('unhandledRejection',e=>console.log('[unhandled]',e?.message||e));process.on('uncaughtException',e=>console.log('[uncaught]',e?.message||e));
+// single-instance guard: a second copy would cause Telegram 409 conflicts
+{const fs=require('fs'),LK=require('path').join(__dirname,'..','data','bot.pid');try{const o=+fs.readFileSync(LK,'utf8');if(o&&o!==process.pid){try{process.kill(o,0);console.error('[lock] another instance is running (pid '+o+'), exiting');process.exit(0)}catch{}}}catch{}
+ fs.mkdirSync(require('path').dirname(LK),{recursive:true});fs.writeFileSync(LK,String(process.pid));process.on('exit',()=>{try{if(+fs.readFileSync(LK,'utf8')===process.pid)fs.unlinkSync(LK)}catch{}})}
 const {settings:S,OWNER}=require('./config');const Scanner=require('./scanner');const {score}=require('./safety');const T=require('./trader');const W=require('./wallet');const {make,fmt,kb}=require('./bot');const {potential,pairsFor}=require('./potential');const L=require('./log');const {tune}=require('./tune');const {save}=require('./config');const CT=require('./counters');const MP=require('./missed');const HC=require('./holders');
 if(!process.env.BOT_TOKEN||!OWNER){console.error('Set BOT_TOKEN and OWNER_ID in .env (see .env.example)');process.exit(1)}
 console.log('Burner wallet:',W.pub(),'('+W.source()+')','| mode:',S.paper?'PAPER':'LIVE','| auto:',S.auto);
@@ -47,5 +51,5 @@ MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return
  console.log(`[2nd] ${w.symbol} +${gain.toFixed(0)}% S${d.score} ${fails.length?'no: '+fails.join('; '):'BUY'}`);
  if(fails.length){CT.skip('2nd chance: '+fails[0].split(/[ :]/)[0]);return false}
  try{await T.buy({mint:w.mint,symbol:d.symbol},S.buySol,{tier:'SECOND',pot:m.potential,safety:d.score,features:{...f,gainSinceSkip:+gain.toFixed(1),skipWhy:w.why}});CT.bought();return true}catch(e){console.log('2nd buy skip',e.message);return false}});
-setInterval(()=>{if(!S.autotune)return;const r=tune(50);if(r.nObs>=100&&r.best.avg>r.current.avg){Object.assign(S,{minScore:r.best.minScore,potScalp:r.best.potScalp,potSwing:r.best.potSwing,potRunner:r.best.potRunner});save();say(`🧠 Autotune applied: ${JSON.stringify(r.best)}`)}},3600000);sc.start();bot.start({onStart:()=>say('🤖 Sniper online ('+(S.paper?'paper':'LIVE')+', auto '+(S.auto?'ON':'OFF')+')')});
-process.on('SIGINT',()=>{sc.stop();bot.stop();process.exit()});
+setInterval(()=>{try{if(!S.autotune)return;const r=tune(50);if(r.nObs>=100&&r.best.avg>r.current.avg){Object.assign(S,{minScore:r.best.minScore,potScalp:r.best.potScalp,potSwing:r.best.potSwing,potRunner:r.best.potRunner});save();say(`🧠 Autotune applied: ${JSON.stringify(r.best)}`)}}catch(e){console.log('autotune err',e.message)}},3600000);sc.start();bot.start({onStart:()=>say('🤖 Sniper online ('+(S.paper?'paper':'LIVE')+', auto '+(S.auto?'ON':'OFF')+')')});
+for(const sg of ['SIGINT','SIGTERM'])process.on(sg,async()=>{try{sc.stop();await bot.stop()}catch{}process.exit()});

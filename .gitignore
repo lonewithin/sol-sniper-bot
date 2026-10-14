@@ -5,3 +5,4 @@ data/
 *.key
 *.enc
 !.env.example
+data.bak-*/
