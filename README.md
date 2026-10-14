@@ -99,6 +99,9 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - In paper mode, rotating only creates the wallet and moves nothing.
 - ⚠️ **Privacy:** rotation makes tracking harder but doesn't stop it. A sweep is an on-chain transfer, so it **links** the old and new wallet. For better separation, skip the sweep and fund each new burner manually from a different source (e.g. straight from an exchange withdrawal), then withdraw the old one elsewhere.
 
+## $ coin lookup
+Send `$TICKER`, `$<mint>` or a bare mint address to get a coin card. It shows market data, safety (hard and soft reasons), potential and tier, and your position if the bot holds the coin, with link, Buy (respects paper mode) and Refresh buttons. Tickers resolve to the Solana pair with the most liquidity. If the ticker is ambiguous you pick from the top 3.
+
 ## Settings menu
 - Bare `/set` opens a button menu: category → setting → explanation, current value, default, quick picks, **Type a value** (validated) and **Reset to default**. Toggles flip with one tap. `/set key value` still works.
 - `/reset` (asks to confirm) restores the defaults. It keeps wallets, the vault, capital, the profit address and trade history, and leaves auto and paper ON.

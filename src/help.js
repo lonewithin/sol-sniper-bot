@@ -20,6 +20,7 @@ It watches for brand-new Solana tokens, gives each one a <b>safety score</b> (ho
 buy:['🛒 Buying',`/auto on|off: let the bot buy by itself. <i>Default: off</i>
 /paper on|off: on = test mode, fake trades. off = LIVE, real SOL. <i>Default: on</i>
 /check &lt;token address&gt;: score any token now, with Buy buttons
+💲 <b>Coin lookup</b>: just send <code>$BONK</code>, <code>$&lt;address&gt;</code> or paste an address. You get a full card: price, mcap, liquidity, volume, changes, buys/sells, holders, age, safety (hard/soft reasons), potential + tier, whether the bot holds it, and buttons for links, Buy 0.02/0.05 (paper-safe) and Refresh. If several coins share a ticker, you pick from the top 3.
 Alerts have <b>Buy 0.02 / Buy 0.05</b> buttons for a manual buy.
 
 <b>Settings</b>
