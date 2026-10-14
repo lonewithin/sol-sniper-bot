@@ -12,7 +12,7 @@ async function poll(notify){const ws=Object.values(M.watch);if(!ws.length)return
  for(const w of ws)if(Date.now()-w.t>TTL)finish(w);
  const live=Object.values(M.watch);const pairs=await pairsFor(live.map(w=>w.mint));const day=SW.lagos().day;
  for(const w of live){const p=pairs[w.mint];if(!p?.priceUsd)continue;const ch=(+p.priceUsd/w.p0-1)*100;w.now=ch;w.peak=Math.max(w.peak,ch);w.priceNow=+p.priceUsd;
-  if(hook&&S.secondChance&&S.auto&&ch>=S.secondChanceGainPct&&!w.sc&&(!w.scT||Date.now()-w.scT>600000)){w.scT=Date.now();hook(w,p,ch).then(b=>{if(b)w.sc=true}).catch(()=>{})}
+  if(hook&&S.secondChance&&S.auto&&S.snipe&&ch>=S.secondChanceGainPct&&!w.sc&&(!w.scT||Date.now()-w.scT>600000)){w.scT=Date.now();hook(w,p,ch).then(b=>{if(b)w.sc=true}).catch(()=>{})}
   const ms=[1+S.missedAlertPct/100,5,10].filter((x,i,a)=>a.indexOf(x)===i).sort((a,b)=>a-b);
   for(const x of ms){if(ch>=(x-1)*100&&!w.hit.includes(x)){w.hit.push(x);
    const td=(M.today[day]??=[]);const e=td.find(z=>z.mint===w.mint);if(e)e.peak=w.peak;else td.push({mint:w.mint,symbol:w.symbol,peak:w.peak,why:w.why});

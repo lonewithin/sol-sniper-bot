@@ -80,7 +80,16 @@ profit:['💰 Profit',`Every night at 23:55 WAT the bot can send profit (balance
 • <code>autoSweep</code> on|off: on = sends nightly, off = just reminds you. <i>on</i>
 • <code>profitReserveSol</code>: SOL kept for fees. <i>0.003</i>
 A preview is always shown first. In test mode nothing is sent.`],
-test:['🧪 Testing & stats',`/pnl: total profit/loss, wins, losses, win rate
+big:['🐋 Big Play',`<b>Two strategies</b>, each with its own on/off:
+/snipe on|off: 🎯 fast hunting of brand-new coins (minutes). <i>on</i>
+/bigplay on|off: 🐋 established coins with real traction, held for hours. <i>on</i>
+Both also need /auto on. /settings has buttons for both.
+
+<b>How Big Play picks coins</b>: trending/boosted DexScreener coins with market cap between <code>bigMinMcap</code> ($100k) and <code>bigMaxMcap</code> ($20M), liquidity ≥ <code>bigMinLiq</code> ($50k), age ≥ <code>bigMinAgeH</code> (1h), 1h volume above the 6h average, buys÷sells ≥ <code>bigMinRatio</code> (1.2), holders growing, safety ≥ <code>bigMinScore</code> (60), no ⛔ hard blockers. It enters on <b>momentum</b> (going up now) or a <b>pullback</b> (big 6h run, small 1h dip).
+<b>Selling</b>: sells half at +<code>bigPartialAt</code> (100% = 2x), trails the rest by <code>bigTrail</code> 25%, stop loss −<code>bigSl</code> 30%, max hold <code>bigMaxHoldH</code> 24h. It checks every <code>bigPollSec</code> 45s.
+<b>Budget</b>: <code>bigBuySol</code> 0.05 per trade · <code>bigMaxOpen</code> 2 · <code>bigMaxDailySol</code> 0.15/day · scan every <code>bigScanMin</code> 5 min.
+/stats → 🐋 Big Play page.`],
+ test:['🧪 Testing & stats',`/pnl: total profit/loss, wins, losses, win rate
 /stats: dashboard with buttons. <b>Overview</b> (today/all-time, win rate bar, PnL), <b>Hunting</b> (sources, skip reasons, speed), <b>Trades</b> (by tier, best/worst, last 5), <b>Wallet</b> (balance, capital, profit, open positions)
 /positions: open trades
 👀 <b>Missed pumps</b>: the bot keeps watching coins it skipped (up to 6h) and tells you if one goes 2x / 5x / 10x, with why it skipped it. See /stats → Missed for skip accuracy.
@@ -93,5 +102,5 @@ const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Beginner guide'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['pnl','Profit & win rate'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Change a setting']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Beginner guide'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['pnl','Profit & win rate'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Change a setting']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};

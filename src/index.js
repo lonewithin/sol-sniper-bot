@@ -5,7 +5,7 @@ const {bot,say}=make();const sc=new Scanner();const q=[];let busy=0;
 require('./send').startBlockhashCache();const F=require('./fast');const {rotate}=require('./rotate');
 async function maybeRotate(){const n=W.list()[W.activeIndex()].trades;const day=W.list()[W.activeIndex()].created<Date.now()-864e5;
  if(T.st.open.some(p=>!p.paper))return;if((S.rotateEveryTrades>0&&n>=S.rotateEveryTrades)||(S.rotateDaily&&day)){const r=await rotate();bot.sendNewBurner?.(r)}}
-sc.on('raw',async(ev,tDetect)=>{if(S.mode!=='fast'||!S.auto)return;const mig=ev.txType==='migrate';if(mig?!S.fastMigrations:!(S.fastNewLaunches&&ev.txType==='create'))return;
+sc.on('raw',async(ev,tDetect)=>{if(S.mode!=='fast'||!S.auto||!S.snipe)return;const mig=ev.txType==='migrate';if(mig?!S.fastMigrations:!(S.fastNewLaunches&&ev.txType==='create'))return;
  try{const ic=await F.instant(ev);CT.scanned('pumpportal '+ev.txType);if(!ic.ok){CT.skip('fast: '+ic.reasons[0].replace(/[❌✅] /,'').replace(/[\d.]+%?/g,'').trim());console.log('fast skip',ev.mint,ic.reasons.join(' '));return}
   const p=await T.fastBuy(ev,S.buySol,{tDetect,reasons:ic.reasons});CT.bought();CT.latency(p.lat.detectToSent??p.lat.detectToSigned);console.log('fast buy',ev.mint,JSON.stringify(p.lat));
   setTimeout(async()=>{const d=await score(ev.mint,ev).catch(()=>null);p.safety=d?.score??0;p.pendingPostCheck=false;
@@ -19,7 +19,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   console.log(`[S${d.score} P${m.potential} ${m.tier}] ${d.symbol} ${t.mint} ${t.src}`);
   L.observe({mint:t.mint,symbol:d.symbol,src:t.src,safety:d.score,pot:m.potential,tier:m.tier,f:m.f,p0:d.priceUsd||null});
   CT.scanned(t.src,d.score,m.potential);
-  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':!S.auto?'auto off':null;
+  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':!S.auto?'auto off':!S.snipe?'snipe off':null;
   const card=()=>{CT.alerted();return bot.api.sendMessage(OWNER,`🆕 ${t.src} · <b>${m.tier}</b> potential ${m.potential}/100\n`+fmt(d)+'\n<i>'+m.reasons.join(' · ')+'</i>',{parse_mode:'HTML',reply_markup:kb(d.mint),link_preview_options:{is_disabled:true}}).catch(()=>{})};
   if(S.alerts==='all'&&!((d.liqUsd||0)<S.minLiqUsd&&d.score<S.minScore))card();
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
@@ -27,7 +27,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:m.f});CT.bought();maybeRotate().catch(()=>{})}
   catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
-setInterval(()=>T.monitor(),10000);require('./sweep').schedule(say);MP.start(say);
+setInterval(()=>T.monitor(),10000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));
 MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return false;
  const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
  const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);

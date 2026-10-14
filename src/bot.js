@@ -4,9 +4,13 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
  require('./help').install(bot);
  bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));
+ for(const k of ['snipe','bigplay'])bot.command(k,c=>{S[k]=/on/i.test(c.match);save();c.reply(`${k==='snipe'?'🎯 Snipe':'🐋 Big Play'} ${S[k]?'ON':'OFF'}${S.auto?'':' (note: /auto is off)'}`)});
+ const stratKb=()=>new InlineKeyboard().text(`🎯 Snipe: ${S.snipe?'ON':'OFF'}`,'tg:snipe').text(`🐋 Big Play: ${S.bigplay?'ON':'OFF'}`,'tg:bigplay').row().text(`🤖 Auto: ${S.auto?'ON':'OFF'}`,'tg:auto').text(S.paper?'🧪 Paper':'🔴 LIVE','tg:info').row().text('💰 Profit / sweep menu','pf:menu');
+ bot.callbackQuery(/^tg:(snipe|bigplay|auto)$/,c=>{const k=c.match[1];S[k]=!S[k];save();c.answerCallbackQuery(`${k} ${S[k]?'ON':'OFF'}`);c.editMessageReplyMarkup({reply_markup:stratKb()}).catch(()=>{})});
+ bot.callbackQuery('tg:info',c=>c.answerCallbackQuery('Use /paper on|off to change mode'));
  bot.command('auto',c=>{S.auto=/on/i.test(c.match);save();c.reply(`Auto-snipe ${S.auto?'ON':'OFF'} (${S.paper?'PAPER':'LIVE'})`)});
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
- bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML',reply_markup:new InlineKeyboard().text('💰 Profit / sweep menu','pf:menu')}));
+ bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML',reply_markup:stratKb()}));
  bot.callbackQuery('pf:menu',async c=>{c.answerCallbackQuery();c.reply(...await profitMenu())});
  bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
   if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}

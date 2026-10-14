@@ -80,6 +80,17 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - Exits are RUNNER-style: sell 50% at +50%, trail the rest, stop loss −`secondChanceSl` (15%).
 - `/set secondChance off` turns it off. These trades show as 🔁 2nd chance in `/stats` → Trades.
 
+## Big Play strategy
+- A second strategy for established coins with traction, held for hours. It's toggled with `/bigplay on|off` (`/snipe on|off` toggles the new-coin sniper). Both need `/auto on`, and `/settings` has buttons for both.
+- **Candidates:** DexScreener top/latest boosts, profiles and search results.
+- **Filters:**
+  - market cap $100k–$20M, liquidity ≥ $50k, age ≥ 1h
+  - 1h volume above the 6h average, 1h buys/sells ≥ 1.2
+  - holders not falling, safety ≥ 60, no hard blockers
+- **Entry:** momentum (5m and 1h up) or a pullback (6h > +20%, 1h between −20% and 0).
+- **Exits:** sell 50% at 2x, trail the rest by 25%, stop loss −30%, max hold 24h, re-checked every 45s.
+- **Budget:** its own: `bigBuySol` 0.05, `bigMaxOpen` 2, `bigMaxDailySol` 0.15. `/stats` → 🐋 Big Play, and Overview splits PnL by strategy.
+
 ## Rotating burners
 - Every burner is kept in one encrypted vault, `data/vault.enc` (AES-256-GCM).
 - `/newburner` creates a new wallet, sweeps the SOL into it (and SPL tokens if `/set sweepTokens on`), and makes it active. The bot then DMs you the new key as a spoiler that **deletes after 60s**. **Save it offline.**

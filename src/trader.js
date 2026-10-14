@@ -12,7 +12,7 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
 // FAST buy via PumpPortal (bonding curve / PumpSwap). Returns position. Latency logged from detection time tDetect.
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  sol=+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(spent+sol>S.maxDailySol)throw new Error('daily cap');if(st.open.length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
+ if(spent+sol>S.maxDailySol)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG').length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -29,14 +29,14 @@ async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
 async function pumpSell(p,pct){const kp=W.load();const bytes=await F.build(kp.publicKey.toBase58(),'sell',p.mint,pct+'%',{pool:'auto',denomSol:false});const {sig}=await SND.signAndSend(bytes,kp);await SND.confirm(sig).catch(()=>{});return sig;}
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
  const r=rules(tier)||rules('SWING');
- if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(spent+sol>S.maxDailySol)throw new Error(`daily cap ${S.maxDailySol} SOL reached`);
- if(st.open.length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
+ if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?Math.max(S.maxPerTrade,S.bigBuySol):S.maxPerTrade).toFixed(4);const big=tier==='BIG';const dk=(big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=big?S.bigMaxDailySol:S.maxDailySol;
+ if(spent+sol>cap)throw new Error(`daily cap ${cap} SOL reached`);
+ if(st.open.filter(p=>(p.tier==='BIG')===big).length>=(big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
- const sig=S.paper?'PAPER':await swap(q);st.daily[today()]=spent+sol;
+ const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=spent+sol;
  const decimals=await dec(tok.mint);const entry=sol/(Number(q.outAmount)/10**decimals);
  const p={mint:tok.mint,symbol:tok.symbol||'?',solIn:sol,tokens:q.outAmount,tokens0:q.outAmount,realized:0,decimals,entry,peak:0,opened:Date.now(),sig,paper:S.paper,manual,tier,rules:r,pot,safety,features};st.open.push(p);save();W.countTrade();
- notify(`🟢 BUY ${p.symbol} · ${tier==='SECOND'?'🔁 SECOND CHANCE':tier}${manual?' (manual)':''}${p.paper?' [paper]':''}\nSOL in: ${sol} · potential ${pot??'-'} · safety ${safety??'-'}\nEntry: ${fp(entry)} SOL/token\nPlan: ${r.tp?'TP +'+r.tp+'% ':''}${r.partialAt?'sell 50% at +'+r.partialAt+'% ':''}SL -${r.sl}%${r.trail?' trail '+r.trail+'%':''} max ${r.maxMin}m\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
+ notify(`🟢 BUY ${p.symbol} · ${tier==='SECOND'?'🔁 SECOND CHANCE':tier==='BIG'?'🐋 BIG PLAY':tier}${manual?' (manual)':''}${p.paper?' [paper]':''}\nSOL in: ${sol} · potential ${pot??'-'} · safety ${safety??'-'}\nEntry: ${fp(entry)} SOL/token\nPlan: ${r.tp?'TP +'+r.tp+'% ':''}${r.partialAt?'sell 50% at +'+r.partialAt+'% ':''}SL -${r.sl}%${r.trail?' trail '+r.trail+'%':''} max ${r.maxMin}m\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
 async function value(p,amt=p.tokens){const q=await quote(p.mint,SOL,amt,S.slippageBps);return {q,sol:Number(q.outAmount)/LAMPORTS_PER_SOL};}
 async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tokens)*BigInt(Math.round(frac*1000))/1000n);
  let sol=0,sig='PAPER';try{const v=await value(p,amt);sol=v.sol;if(!p.paper)sig=await swap(v.q);}catch(e){if(p.paper){}else if(p.fast){sig=await pumpSell(p,Math.round(frac*100))}else throw e}
@@ -47,8 +47,8 @@ async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tok
  const c={...p,solOut:out,exit,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why,closed:Date.now(),holdMin:+((Date.now()-p.opened)/6e4).toFixed(1),sellSig:sig};st.closed.push(c);save();
  L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why,holdMin:c.holdMin,paper:c.paper,opened:c.opened,closed:c.closed});
  notify(`${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} · ${c.tier} (${why})${c.paper?' [paper]':''}\nSOL in: ${c.solIn} → out: ${out.toFixed(5)} · held ${c.holdMin}m\nEntry: ${fp(c.entry||0)} → Exit: ${fp(exit)} SOL/token\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct>=0?'+':''}${c.pnlPct.toFixed(1)}%)${c.paper?'':'\ntx: '+sig}`);return c;}
-async function monitor(){if(!st.open.length)return;const pairs=await pairsFor(st.open.map(p=>p.mint));
- for(const p of [...st.open]){try{const r=p.rules||rules('SWING');const rest=Number(p.tokens)/Number(p.tokens0||p.tokens);
+async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk||Date.now()-p.lastChk>=S.bigPollSec*1000);if(!due.length)return;const pairs=await pairsFor(due.map(p=>p.mint));
+ for(const p of due){p.lastChk=Date.now();try{const r=p.rules||rules('SWING');const rest=Number(p.tokens)/Number(p.tokens0||p.tokens);
   const {sol}=await value(p);p.last=sol;const ch=((sol+p.realized)/(p.solIn)-1)*100;const curCh=(sol/(p.solIn*rest)-1)*100;
   p.peak=Math.max(p.peak||0,curCh);const age=(Date.now()-p.opened)/6e4;
   const m=potential(pairs[p.mint],{safety:p.safety||S.minScore,mint:p.mint});p.potNow=m.potential;let why=null;
@@ -57,7 +57,7 @@ async function monitor(){if(!st.open.length)return;const pairs=await pairsFor(st
   else if(r.tp&&curCh>=r.tp)why=`TP +${ch.toFixed(1)}%`;
   else if((r.trail||S.trailingPct)&&p.peak>=10&&curCh<=p.peak-(r.trail||S.trailingPct))why=`trailing (peak +${p.peak.toFixed(1)}%) ${ch.toFixed(1)}%`;
   else if(age>=r.maxMin)why=`time stop ${r.maxMin}m (${ch.toFixed(1)}%)`;
-  else if(age>=1&&m.potential<S.momentumExit&&pairs[p.mint])why=`momentum died (pot ${m.potential}) ${ch.toFixed(1)}%`;
+  else if(p.tier!=='BIG'&&age>=1&&m.potential<S.momentumExit&&pairs[p.mint])why=`momentum died (pot ${m.potential}) ${ch.toFixed(1)}%`;
   if(why)await sell(p,why);}catch(e){}}save();}
 const balance=async()=>(await conn.getBalance(W.load().publicKey))/LAMPORTS_PER_SOL;
 const stats=()=>{const c=st.closed,w=c.filter(x=>x.pnl>0).length,i=c.reduce((a,x)=>a+x.solIn,0),o=c.reduce((a,x)=>a+x.solOut,0);return {n:c.length,wins:w,losses:c.length-w,winRate:c.length?w/c.length*100:0,solIn:i,solOut:o,pnl:o-i,pnlPct:i?(o/i-1)*100:0}};
