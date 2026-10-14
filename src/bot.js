@@ -2,18 +2,26 @@ const {Bot,InlineKeyboard}=require('grammy');const {settings:S,save,OWNER}=requi
 function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.use((ctx,next)=>ctx.from?.id===OWNER?next():undefined); // owner-only, silently ignore others
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
- bot.command('start',c=>c.reply('Sol Sniper ready. /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /export'));
+ bot.command('start',c=>c.reply('Sol Sniper ready. /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /export'));
  bot.command('auto',c=>{S.auto=/on/i.test(c.match);save();c.reply(`Auto-snipe ${S.auto?'ON':'OFF'} (${S.paper?'PAPER':'LIVE'})`)});
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML'}));
- bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S)||typeof S[k]==='boolean')return c.reply('Unknown/boolean key');const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
+ bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
+  if(typeof S[k]==='boolean'){if(['auto','paper'].includes(k))return c.reply('Use /'+k);S[k]=/^(on|true|1)$/i.test(v);save();return c.reply(`${k} = ${S[k]}`)}const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
   if(k==='buySol'&&n>S.maxPerTrade)return c.reply(`buySol > maxPerTrade (${S.maxPerTrade})`);S[k]=n;save();c.reply(`${k} = ${n}`)});
  bot.command('wallet',async c=>c.reply(`Burner (${W.source()}): <code>${W.pub()}</code>\nBalance: ${await T.balance().catch(()=>'?')} SOL\nFund with SMALL amounts only.`,{parse_mode:'HTML'}));
  bot.command('export',async c=>{if(c.chat.type!=='private')return c.reply('DM only');
   if(c.match.trim()!=='CONFIRM')return c.reply('This reveals the burner private key. Send: /export CONFIRM — message self-deletes in 60s.');
   const m=await c.reply(`🔐 Burner key (save offline, then this deletes in 60s):\n<tg-spoiler>${W.exportSecret()}</tg-spoiler>`,{parse_mode:'HTML'});
   setTimeout(()=>{c.api.deleteMessage(c.chat.id,m.message_id).catch(()=>{});c.deleteMessage().catch(()=>{})},60000);});
- bot.command('positions',c=>c.reply(T.st.open.length?T.st.open.map(p=>`${p.symbol} ${p.solIn} SOL → ${(p.last??p.solIn).toFixed(4)} ${p.paper?'[paper]':''}\n<code>${p.mint}</code>`).join('\n\n'):'No open positions',{parse_mode:'HTML'}));
+ bot.command('strategy',c=>c.reply(`🧭 Strategy
+Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume accel + price m5 + liq Δ + holder Δ + activity + safety.
+• SCALP (pot ≥ ${S.potScalp}): TP +${S.scalpTp}% · SL -${S.scalpSl}% · max ${S.scalpMaxMin}m · size ×0.6
+• SWING (pot ≥ ${S.potSwing}): TP +${S.swingTp}% · SL -${S.swingSl}% · trail ${S.swingTrail}% · max ${S.swingMaxMin}m · size ×1
+• RUNNER (pot ≥ ${S.potRunner}): sell 50% at +${S.runnerPartialAt}%, trail ${S.runnerTrail}% rest · SL -${S.runnerSl}% · max ${S.runnerMaxMin}m · size ×1.5
+Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling ${S.sizeByPotential?'ON':'OFF'} (always capped at ${S.maxPerTrade} SOL/trade, ${S.maxDailySol}/day). Autotune ${S.autotune?'ON':'OFF'}.`));
+ bot.command('stats',c=>{const r=require('./tune');const l=r.stats();const t=r.tune(20);c.reply((l.length?l.join('\n'):'No closed trades yet')+`\n\nObservations: ${t.nObs}\nSuggested: minScore ${t.best.minScore}, scalp ${t.best.potScalp}, swing ${t.best.potSwing}, runner ${t.best.potRunner} (sim avg ${t.best.avg.toFixed(1)}% over ${t.best.n})`)});
+ bot.command('positions',c=>c.reply(T.st.open.length?T.st.open.map(p=>`${p.symbol} ${p.tier||''} pot ${p.potNow??p.pot??'-'} ${p.solIn} SOL → ${(p.last??p.solIn).toFixed(4)} ${p.paper?'[paper]':''}\n<code>${p.mint}</code>`).join('\n\n'):'No open positions',{parse_mode:'HTML'}));
  bot.command('pnl',c=>{const a=T.stats();c.reply(`📊 PnL (incl. paper)\nTrades: ${a.n} · ✅ ${a.wins} · 🔻 ${a.losses} · Win rate ${a.winRate.toFixed(1)}%\nSOL in ${a.solIn.toFixed(4)} → out ${a.solOut.toFixed(4)}\nTotal: ${a.pnl>=0?'+':''}${a.pnl.toFixed(5)} SOL (${a.pnlPct.toFixed(1)}%)\nOpen: ${T.st.open.length}`)});
  const pend=new Map();
  bot.command('withdraw',async c=>{const [to,amt]=c.match.trim().split(/\s+/);const {PublicKey}=require('@solana/web3.js');

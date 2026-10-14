@@ -24,7 +24,7 @@ async function score(mint,hint={}){
  if(r?.topHolders?.length){const h=r.topHolders.filter(x=>!x.insider||true).filter(x=>!pools.has(x.address)&&!pools.has(x.owner));top10=h.slice(0,10).reduce((a,x)=>a+(x.pct||0),0);}
  else if(large.value?.value&&d.supply){const v=large.value.value.slice(1,11);top10=v.reduce((a,x)=>a+Number(x.uiAmount||0),0)/d.supply*100;R.push('ℹ️ top10 excludes largest acct (assumed pool)');}
  if(top10!=null){d.top10=+top10.toFixed(1);top10>50?pen(25,`Top10 hold ${d.top10}%`):top10>30?pen(10,`Top10 hold ${d.top10}%`):ok(`Top10 hold ${d.top10}%`);}
- if(r){d.rugScore=r.score_normalised;const lp=Math.max(0,...(r.markets||[]).map(m=>m.lp?.lpLockedPct||0));d.lpLocked=+lp.toFixed(1);
+ if(r){d.rugScore=r.score_normalised;d.holders=r.totalHolders||null;const lp=Math.max(0,...(r.markets||[]).map(m=>m.lp?.lpLockedPct||0));d.lpLocked=+lp.toFixed(1);
   const pump=/pump/i.test(d.dex||'')||(r.markets||[]).some(m=>/pump/i.test(m.marketType||''));
   if(lp>=90)ok(`LP locked/burned ${d.lpLocked}%`);else if(pump)ok('PumpSwap/pump.fun pool (LP held by program)');else pen(20,`LP only ${d.lpLocked}% locked`);
   if(r.creatorBalance&&d.supply){d.devPct=+(r.creatorBalance/10**(d.decimals||6)/d.supply*100).toFixed(2);d.devPct>10?pen(15,`Dev holds ${d.devPct}%`):ok(`Dev holds ${d.devPct}%`);}

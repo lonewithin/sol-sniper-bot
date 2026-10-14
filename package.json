@@ -5,7 +5,9 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "scan-test": "node scripts/scan-test.js"
+    "scan-test": "node scripts/scan-test.js",
+    "tune": "node scripts/tune.js",
+    "replay": "node scripts/replay.js"
   },
   "keywords": [],
   "author": "",
