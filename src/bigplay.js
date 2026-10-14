@@ -5,6 +5,7 @@ async function candidates(){const set=new Set();
  for(const u of['https://api.dexscreener.com/token-boosts/top/v1','https://api.dexscreener.com/token-boosts/latest/v1','https://api.dexscreener.com/token-profiles/latest/v1'])
   try{for(const t of await j(u))if(t.chainId==='solana')set.add(t.tokenAddress)}catch{}
  for(const q of ['solana','pump','raydium','meteora','SOL meme'])try{const r=await j('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q));for(const p of r.pairs||[])if(p.chainId==='solana'&&p.baseToken?.address&&p.baseToken.address!=='So11111111111111111111111111111111111111112')set.add(p.baseToken.address)}catch{}
+ for(const m of require('./signals').hotMints())set.add(m);for(const m of require('./signals').trendMints())set.add(m);
  return [...set];}
 function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,age=p.pairCreatedAt?(Date.now()-p.pairCreatedAt)/36e5:0;
  const v1=p.volume?.h1||0,v6=p.volume?.h6||0,t=p.txns?.h1||{},ratio=((t.buys||0)+1)/((t.sells||0)+1);

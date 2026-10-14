@@ -18,6 +18,7 @@ function potential(pair,{safety=0,holders=null,mint}={}){
  if(hGrow)add(Math.max(-5,Math.min(10,Math.round(hGrow))),`holders Δ ${hGrow.toFixed(1)}%`);
  add(b+s>=40?10:b+s>=10?5:-5,`activity ${b+s} txns m5`);
  add(Math.round((safety-50)/5),`safety ${safety}`);
+ {const sg=require('./signals').boost(mint);if(sg.n)add(sg.n,sg.why.join(' + '))}
  const pot=Math.max(0,Math.min(100,pts+20));
  const tier=safety<S.minScore?'SKIP':pot>=S.potRunner?'RUNNER':pot>=S.potSwing?'SWING':pot>=S.potScalp?'SCALP':'SKIP';
  return {potential:pot,tier,reasons:R,f:{buys:b,sells:s,ratio:+ratio.toFixed(2),accel:+accel.toFixed(2),pc5,liq,liqCh:+liqCh.toFixed(1),hGrow:+hGrow.toFixed(1),v5,safety}};}

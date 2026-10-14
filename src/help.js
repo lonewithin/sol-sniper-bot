@@ -98,7 +98,13 @@ win:['🏆 Win-rate rules',`<b>Extra filters on every strategy</b> (change in /s
 • <code>lossStreakN</code> / <code>lossPauseMin</code>: after 3 losses in a row, snipe + second chance pause 30 min. <i>3 · 30</i>
 • <code>paperCostPct</code>: paper sells lose this % plus the priority fee, so test PnL is realistic. <i>1.5</i>
 Trades are tagged with a version (<code>ver</code>) so before/after can be compared.`],
-big:['🐋 Big Play',`<b>Two strategies</b>, each with its own on/off:
+sig:['📡 Signals',`<b>Extra signals</b> (change in /set → Signals; /reset restores these)
+• <code>smartWallets</code>: the bot learns wallets that bought early in past winners (our wins + missed 2x pumps), saved in data/smartwallets.json, and watches them. When ≥ <code>smartMinWallets</code> buy the same coin within <code>smartWindowMin</code> min, potential +<code>smartBoost</code> and Big Play checks it. <i>on · 2 · 30 · 15</i>
+• <code>trending</code>: coins on DexScreener's top/latest boosts get potential +<code>trendBoost</code> (safety rules still apply) and are fed to Big Play. <i>on · 10</i>
+• <code>todFilter</code>: tracks profit by WAT hour. Once an hour has ≥ <code>todMinTrades</code> trades and is losing (win &lt; 40%, PnL &lt; 0), buys are sized × <code>todLosingSize</code>. Until then it only logs. <i>on · 5 · 0.5</i>
+• <code>autoTune</code>: at 00:30 WAT it reviews the last 24h per tier and moves stop-loss / take-profit by at most 10% toward what worked, inside hard limits, then messages you. Paper mode only. <i>on</i>`],
+big:['🐋 Big Play',
+`<b>Two strategies</b>, each with its own on/off:
 /snipe on|off: 🎯 fast hunting of brand-new coins (minutes). <i>on</i>
 /bigplay on|off: 🐋 established coins with real traction, held for hours. <i>on</i>
 Both also need /auto on. /settings has buttons for both.
