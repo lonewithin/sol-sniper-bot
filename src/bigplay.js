@@ -19,7 +19,7 @@ async function scan(log=console.log,{dry=false}={}){if(!dry&&!(S.bigplay&&S.auto
  for(const m of mints){const p=pairs[m];const f=filter(p);if(f.length)continue;pass++;const e=entry(p);if(!e){continue}
   cool.set(m,Date.now()+30*6e4);const d=await score(m).catch(()=>null);if(!d)continue;
   const ph=holders.get(m);holders.set(m,d.holders);const fail=[];
-  if(d.hard?.length)fail.push('hard: '+d.hard.join(', '));if(d.score<S.bigMinScore)fail.push(`safety ${d.score}`);if(ph&&d.holders&&d.holders<ph)fail.push('holders falling');
+  if(d.hard?.length)fail.push('hard: '+d.hard.join(', '));if(d.score<S.bigMinScore)fail.push(`safety ${d.score}`);if(ph&&d.holders&&d.holders<ph)fail.push('holders falling');{const hc=await require('./holders').check(m,d);if(!hc.ok)fail.push('holders: '+hc.fails.join(', '))}
   const row={mint:m,symbol:d.symbol,mcap:p.marketCap||p.fdv,liq:p.liquidity?.usd,entry:e,safety:d.score,fail};out.push(row);
   log(`[BIG] ${d.symbol} mc $${((row.mcap||0)/1e6).toFixed(2)}M liq $${((row.liq||0)/1e3).toFixed(0)}k ${e} S${d.score} ${fail.length?'no: '+fail.join('; '):'BUY'}`);
   if(!fail.length&&!dry){try{await T.buy({mint:m,symbol:d.symbol},S.bigBuySol,{tier:'BIG',pot:potential(p,{safety:d.score,mint:m}).potential,safety:d.score,features:{entry:e,mcap:row.mcap,liq:row.liq,pc:p.priceChange}});require('./counters').bought()}catch(err){log('[BIG] buy skip '+err.message)}}}

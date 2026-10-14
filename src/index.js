@@ -1,4 +1,4 @@
-const {settings:S,OWNER}=require('./config');const Scanner=require('./scanner');const {score}=require('./safety');const T=require('./trader');const W=require('./wallet');const {make,fmt,kb}=require('./bot');const {potential,pairsFor}=require('./potential');const L=require('./log');const {tune}=require('./tune');const {save}=require('./config');const CT=require('./counters');const MP=require('./missed');
+const {settings:S,OWNER}=require('./config');const Scanner=require('./scanner');const {score}=require('./safety');const T=require('./trader');const W=require('./wallet');const {make,fmt,kb}=require('./bot');const {potential,pairsFor}=require('./potential');const L=require('./log');const {tune}=require('./tune');const {save}=require('./config');const CT=require('./counters');const MP=require('./missed');const HC=require('./holders');
 if(!process.env.BOT_TOKEN||!OWNER){console.error('Set BOT_TOKEN and OWNER_ID in .env (see .env.example)');process.exit(1)}
 console.log('Burner wallet:',W.pub(),'('+W.source()+')','| mode:',S.paper?'PAPER':'LIVE','| auto:',S.auto);
 const {bot,say}=make();const sc=new Scanner();const q=[];let busy=0;
@@ -19,20 +19,31 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   console.log(`[S${d.score} P${m.potential} ${m.tier}] ${d.symbol} ${t.mint} ${t.src}`);
   L.observe({mint:t.mint,symbol:d.symbol,src:t.src,safety:d.score,pot:m.potential,tier:m.tier,f:m.f,p0:d.priceUsd||null});
   CT.scanned(t.src,d.score,m.potential);
-  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':(m.tier!=='RUNNER'&&(m.f?.pc5??0)<S.minEntryPc5)?'dumping (m5 < '+S.minEntryPc5+'%)':(m.f?.v5??0)<S.minEntryVol5m?'low 5m volume':!S.auto?'auto off':!S.snipe?'snipe off':null;
+  const why=d.score<S.minScore?'safety below '+S.minScore:(d.liqUsd||0)<S.minLiqUsd?'liquidity below $'+S.minLiqUsd:m.tier==='SKIP'?'low potential':(m.tier!=='RUNNER'&&(m.f?.pc5??0)<S.minEntryPc5)?'dumping (m5 < '+S.minEntryPc5+'%)':(m.f?.v5??0)<S.minEntryVol5m?'low 5m volume':(m.tier==='SCALP'&&(m.f?.ratio??0)<S.scalpMinRatio)?'weak scalp (buy/sell < '+S.scalpMinRatio+')':!S.auto?'auto off':!S.snipe?'snipe off':null;
   const card=()=>{CT.alerted();return bot.api.sendMessage(OWNER,`🆕 ${t.src} · <b>${m.tier}</b> potential ${m.potential}/100\n`+fmt(d)+'\n<i>'+m.reasons.join(' · ')+'</i>',{parse_mode:'HTML',reply_markup:kb(d.mint),link_preview_options:{is_disabled:true}}).catch(()=>{})};
   if(S.alerts==='all'&&!((d.liqUsd||0)<S.minLiqUsd&&d.score<S.minScore))card();
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
   if(why){CT.skip(why);if(why!=='auto off'||true)MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why});return}
-  try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:m.f});CT.bought();maybeRotate().catch(()=>{})}
-  catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}
+  const hc=await HC.check(t.mint,d);console.log(`[holders] ${d.symbol} top10 ${hc.top10??'?'}% dev ${hc.dev??'?'}% (${hc.src}) ${hc.ok?'OK':'SKIP: '+hc.fails.join(', ')}`);
+  if(!hc.ok){CT.skip('holders concentrated');MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'holders concentrated'});return}
+  if(T.paused()){CT.skip('loss-streak pause');console.log('[pause] skip',d.symbol);return}
+  const doBuy=async(f=m.f)=>{try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:{...f,top10:hc.top10,dev:hc.dev}});CT.bought();maybeRotate().catch(()=>{})}
+  catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}};
+  if(!(S.confirmSec>0))return doBuy();
+  console.log(`[confirm] ${d.symbol} waiting ${S.confirmSec}s (buys h1 ${pr?.txns?.h1?.buys??0}, price ${pr?.priceUsd})`);
+  const b0=pr?.txns?.h1?.buys||0,p0=+(pr?.priceUsd||0);
+  setTimeout(async()=>{try{const p2=(await pairsFor([t.mint]))[t.mint];const b1=p2?.txns?.h1?.buys||0,p1=+(p2?.priceUsd||0);const drop=p0&&p1?(1-p1/p0)*100:100;const m5=p2?.txns?.m5||{};
+   const fails=[];if(!p2)fails.push('no pair');if(b1-b0<S.confirmMinBuys)fails.push(`only ${b1-b0} new buys`);if(drop>S.confirmMaxDropPct)fails.push(`price -${drop.toFixed(1)}%`);if((m5.buys||0)<(m5.sells||0))fails.push('5m sells > buys');
+   console.log(`[confirm] ${d.symbol} +${b1-b0} buys, price ${drop>0?'-':'+'}${Math.abs(drop).toFixed(1)}% → ${fails.length?'SKIP: '+fails.join(', '):'BUY'}`);
+   if(fails.length){CT.skip('confirm: '+fails[0].replace(/[\d.-]+%?/g,'').trim());MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'failed confirmation'});return}
+   if(T.paused())return console.log('[pause] skip',d.symbol);await doBuy({...m.f,confirmBuys:b1-b0,confirmDrop:+drop.toFixed(1)})}catch(e){console.log('confirm err',e.message)}},S.confirmSec*1000);
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
 let monBusy=false;setInterval(async()=>{if(monBusy)return;monBusy=true;try{await T.monitor()}catch(e){console.log('monitor err',e.message)}finally{monBusy=false}},(S.monitorSec||5)*1000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));
 MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return false;
  const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
  const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);
  if((f.ratio||0)<S.secondChanceMinRatio)fails.push(`buy/sell ${f.ratio}`);if((f.accel||0)<1)fails.push(`volume not rising x${f.accel}`);
- if((d.liqUsd||0)<S.minLiqUsd)fails.push('liq $'+(d.liqUsd||0).toFixed(0));{const q=MP.quality(pair);if(q.length)fails.push('market not real: '+q.join(', '))}if(f.hGrow<0)fails.push(`holders falling ${f.hGrow}%`);
+ if((d.liqUsd||0)<S.minLiqUsd)fails.push('liq $'+(d.liqUsd||0).toFixed(0));{const q=MP.quality(pair);if(q.length)fails.push('market not real: '+q.join(', '))}if(f.hGrow<0)fails.push(`holders falling ${f.hGrow}%`);{const hc=await HC.check(w.mint,d);if(!hc.ok)fails.push('holders: '+hc.fails.join(', '))}if(T.paused())fails.push('loss-streak pause');
  console.log(`[2nd] ${w.symbol} +${gain.toFixed(0)}% S${d.score} ${fails.length?'no: '+fails.join('; '):'BUY'}`);
  if(fails.length){CT.skip('2nd chance: '+fails[0].split(/[ :]/)[0]);return false}
  try{await T.buy({mint:w.mint,symbol:d.symbol},S.buySol,{tier:'SECOND',pot:m.potential,safety:d.score,features:{...f,gainSinceSkip:+gain.toFixed(1),skipWhy:w.why}});CT.bought();return true}catch(e){console.log('2nd buy skip',e.message);return false}});
