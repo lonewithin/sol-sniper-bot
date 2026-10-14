@@ -28,5 +28,13 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
 setInterval(()=>T.monitor(),10000);require('./sweep').schedule(say);MP.start(say);
+MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return false;
+ const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
+ const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);
+ if((f.ratio||0)<S.secondChanceMinRatio)fails.push(`buy/sell ${f.ratio}`);if((f.accel||0)<1)fails.push(`volume not rising x${f.accel}`);
+ if((d.liqUsd||0)<S.minLiqUsd)fails.push('liq $'+(d.liqUsd||0).toFixed(0));if(f.hGrow<0)fails.push(`holders falling ${f.hGrow}%`);
+ console.log(`[2nd] ${w.symbol} +${gain.toFixed(0)}% S${d.score} ${fails.length?'no: '+fails.join('; '):'BUY'}`);
+ if(fails.length){CT.skip('2nd chance: '+fails[0].split(/[ :]/)[0]);return false}
+ try{await T.buy({mint:w.mint,symbol:d.symbol},S.buySol,{tier:'SECOND',pot:m.potential,safety:d.score,features:{...f,gainSinceSkip:+gain.toFixed(1),skipWhy:w.why}});CT.bought();return true}catch(e){console.log('2nd buy skip',e.message);return false}});
 setInterval(()=>{if(!S.autotune)return;const r=tune(50);if(r.nObs>=100&&r.best.avg>r.current.avg){Object.assign(S,{minScore:r.best.minScore,potScalp:r.best.potScalp,potSwing:r.best.potSwing,potRunner:r.best.potRunner});save();say(`🧠 Autotune applied: ${JSON.stringify(r.best)}`)}},3600000);sc.start();bot.start({onStart:()=>say('🤖 Sniper online ('+(S.paper?'paper':'LIVE')+', auto '+(S.auto?'ON':'OFF')+')')});
 process.on('SIGINT',()=>{sc.stop();bot.stop();process.exit()});

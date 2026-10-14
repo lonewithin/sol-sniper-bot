@@ -42,7 +42,8 @@ sell:['📈 Selling & tiers',`The bot picks a <b>tier</b> from the potential sco
 
 /strategy: the live rules · /positions: what you hold
 /sellall: sell everything · /panic: auto OFF + sell everything`],
-safe:['🛡 Safety',`<b>Safety score (0–100)</b> takes points off for: the creator can still mint or freeze, tiny liquidity, a few wallets holding most coins, LP not locked, the dev holding a lot, can't sell back (honeypot), or flagged as rugged.
+safe:['🛡 Safety',`<b>Safety score (0–100)</b>. ⛔ <b>HARD</b> blockers (never bought, not even on a second chance): creator can mint, creator can freeze, can't sell (honeypot/no route), RugCheck says rugged. ⚠️ <b>soft</b> penalties lower the score only.
+ takes points off for: the creator can still mint or freeze, tiny liquidity, a few wallets holding most coins, LP not locked, the dev holding a lot, can't sell back (honeypot), or flagged as rugged.
 ⚠️ No score can promise a coin won't rug.
 
 • <code>minScore</code>: lowest safety score allowed to buy. <i>70</i>
@@ -51,6 +52,13 @@ safe:['🛡 Safety',`<b>Safety score (0–100)</b> takes points off for: the cre
 • <code>maxCreatorLaunches</code>: skip creators who launch many coins. <i>1</i>
 • <code>fastPostMinScore</code>: fast-mode buys sell if the after-check is below this. <i>40</i>
 • <code>fastPostCheckSec</code>: seconds after a fast buy to check. <i>8</i>
+🔁 <b>Second chance</b>: if a coin it skipped later runs +<code>secondChanceGainPct</code> (50%) with strong buying, rising volume, enough liquidity, holders not falling, and NO hard blockers, it buys a smaller bag even if safety is below minScore. It exits RUNNER-style (sells half at +50%, trails the rest) with a tighter stop loss.
+• <code>secondChance</code> on|off. <i>on</i>
+• <code>secondChanceMinScore</code>: lowest safety allowed. <i>45</i>
+• <code>secondChanceSize</code>: × normal buy size. <i>0.5</i>
+• <code>secondChanceSl</code>: stop loss %. <i>15</i>
+• <code>secondChanceGainPct</code>: how much it must have run since the skip. <i>50</i>
+• <code>secondChanceMinRatio</code>: min buys÷sells in the last 5 min. <i>1.3</i>
 • <code>alerts</code> all|trades|score|off: <b>trades</b> = only tell me about coins it buys, <b>score</b> = coins that pass safety + potential, <b>all</b> = everything it checks. <i>trades</i> · e.g. <code>/set alerts score</code>
 Only YOUR Telegram account can control this bot.`],
 wallet:['👛 Wallets & burners',`A <b>burner</b> is a throwaway wallet only this bot uses. Keep small amounts in it.

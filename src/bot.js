@@ -10,6 +10,7 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);
  bot.callbackQuery('pf:menu',async c=>{c.answerCallbackQuery();c.reply(...await profitMenu())});
  bot.command('set',c=>{const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
   if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
+  if(k==='secondChance'){S.secondChance=/^(on|true|1)$/i.test(v);save();return c.reply('secondChance = '+S.secondChance)}
   if(k==='missedAlerts'){S.missedAlerts=/^(on|true|1)$/i.test(v);save();return c.reply('missedAlerts = '+S.missedAlerts)}
   if(k==='alerts'){if(!['all','trades','score','off'].includes(v))return c.reply('alerts all|trades|score|off');S.alerts=v;save();return c.reply('alerts = '+v)}
   if(k==='mode'){if(!['fast','safe'].includes(v))return c.reply('mode fast|safe');S.mode=v;save();return c.reply('mode = '+v+(v==='fast'?' ⚡ (instant checks only before buy, full checks after)':''))}

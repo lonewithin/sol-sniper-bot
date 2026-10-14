@@ -68,6 +68,18 @@ Potential score (0–100) = 5-minute buy/sell ratio + volume acceleration (5-min
 - The bot keeps watching skipped coins (the last 300, for up to 6h). If one reaches +`missedAlertPct` (default 100% = 2x), and again at 5x and 10x, it alerts you once per level with why it skipped the coin. Turn this off with `/set missedAlerts off`.
 - Finished watches go to `data/missed.jsonl`. `npm run tune` reports which skip reasons let the most 2x+ coins get away.
 
+## Second chance re-entry
+- If a skipped coin later runs +`secondChanceGainPct` (default 50%), the bot re-scores it. It buys `secondChanceSize` (×0.5) only when **all** of these hold:
+  - safety ≥ `secondChanceMinScore` (45)
+  - buy/sell ratio ≥ 1.3
+  - volume rising
+  - liquidity ≥ `minLiqUsd`
+  - holders not falling
+  - **no hard blockers**
+- Hard blockers: mint authority active, freeze authority active, unsellable or no route, RugCheck rugged. Everything else is a soft penalty.
+- Exits are RUNNER-style: sell 50% at +50%, trail the rest, stop loss −`secondChanceSl` (15%).
+- `/set secondChance off` turns it off. These trades show as 🔁 2nd chance in `/stats` → Trades.
+
 ## Rotating burners
 - Every burner is kept in one encrypted vault, `data/vault.enc` (AES-256-GCM).
 - `/newburner` creates a new wallet, sweeps the SOL into it (and SPL tokens if `/set sweepTokens on`), and makes it active. The bot then DMs you the new key as a spoiler that **deletes after 60s**. **Save it offline.**

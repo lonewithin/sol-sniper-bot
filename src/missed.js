@@ -1,7 +1,7 @@
 // Missed Pumps: watch skipped coins (last 300, up to 6h), alert at 2x/5x/10x once each, track skip accuracy.
 const fs=require('fs'),path=require('path');const {settings:S,DATA}=require('./config');const {pairsFor}=require('./potential');const SW=require('./sweep');
 const F=path.join(DATA,'missed.json'),OUT=path.join(DATA,'missed.jsonl');const MAX=300,TTL=6*3600e3;
-let M={watch:{},done:{pumped:0,dumped:0,flat:0},today:{}};try{M={...M,...JSON.parse(fs.readFileSync(F))}}catch{}
+let hook=null;let M={watch:{},done:{pumped:0,dumped:0,flat:0},today:{}};try{M={...M,...JSON.parse(fs.readFileSync(F))}}catch{}
 const save=()=>fs.writeFileSync(F,JSON.stringify(M));
 function add(c){if(!c.p0||M.watch[c.mint])return;M.watch[c.mint]={...c,t:Date.now(),peak:0,now:0,hit:[]};
  const k=Object.keys(M.watch);if(k.length>MAX){finish(M.watch[k[0]]);}save();}
@@ -12,6 +12,7 @@ async function poll(notify){const ws=Object.values(M.watch);if(!ws.length)return
  for(const w of ws)if(Date.now()-w.t>TTL)finish(w);
  const live=Object.values(M.watch);const pairs=await pairsFor(live.map(w=>w.mint));const day=SW.lagos().day;
  for(const w of live){const p=pairs[w.mint];if(!p?.priceUsd)continue;const ch=(+p.priceUsd/w.p0-1)*100;w.now=ch;w.peak=Math.max(w.peak,ch);w.priceNow=+p.priceUsd;
+  if(hook&&S.secondChance&&S.auto&&ch>=S.secondChanceGainPct&&!w.sc&&(!w.scT||Date.now()-w.scT>600000)){w.scT=Date.now();hook(w,p,ch).then(b=>{if(b)w.sc=true}).catch(()=>{})}
   const ms=[1+S.missedAlertPct/100,5,10].filter((x,i,a)=>a.indexOf(x)===i).sort((a,b)=>a-b);
   for(const x of ms){if(ch>=(x-1)*100&&!w.hit.includes(x)){w.hit.push(x);
    const td=(M.today[day]??=[]);const e=td.find(z=>z.mint===w.mint);if(e)e.peak=w.peak;else td.push({mint:w.mint,symbol:w.symbol,peak:w.peak,why:w.why});
@@ -20,4 +21,4 @@ async function poll(notify){const ws=Object.values(M.watch);if(!ws.length)return
 function start(notify){setInterval(()=>poll(notify).catch(()=>{}),60000).unref?.();}
 function summary(){const d=M.done,n=d.pumped+d.dumped+d.flat;const top=(M.today[SW.lagos().day]||[]).sort((a,b)=>b.peak-a.peak).slice(0,5);
  return {n,...d,acc:n?(1-d.pumped/n)*100:null,watching:Object.keys(M.watch).length,top};}
-module.exports={add,start,summary,poll,OUT,_M:()=>M};
+module.exports={onCandidate:f=>hook=f,add,start,summary,poll,OUT,_M:()=>M};
