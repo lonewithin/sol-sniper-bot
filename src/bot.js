@@ -49,7 +49,7 @@ Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling
   c.reply(`Sweep now? Balance ${bal.toFixed(4)} SOL, capital ${S.capital}, reserve ${S.profitReserveSol}\n→ ${amt} SOL to <code>${S.profitAddress}</code>${S.paper?' [paper: report only]':''}`,{parse_mode:'HTML',reply_markup:new InlineKeyboard().text('✅ Confirm sweep','sw:go').text('❌ Cancel','sw:no')})});
  bot.callbackQuery('sw:no',c=>c.editMessageText('Cancelled'));
  bot.callbackQuery('sw:go',async c=>{await c.editMessageText('Sweeping…');require('./sweep').run(say,'manual').catch(e=>say('❌ '+e.message))});
- bot.command('positions',c=>c.reply(T.st.open.length?T.st.open.map(p=>`${p.symbol} ${p.tier||''} pot ${p.potNow??p.pot??'-'} ${p.solIn} SOL → ${(p.last??p.solIn).toFixed(4)} ${p.paper?'[paper]':''}\n<code>${p.mint}</code>`).join('\n\n'):'No open positions',{parse_mode:'HTML'}));
+ bot.command('positions',c=>c.reply(T.st.open.length?T.st.open.map(p=>`<b>${T.label(p)}</b>\n${p.symbol} pot ${p.potNow??p.pot??'-'} ${p.solIn} SOL → ${(p.last??p.solIn).toFixed(4)} ${p.paper?'[paper]':''}\n<code>${p.mint}</code>`).join('\n\n'):'No open positions',{parse_mode:'HTML'}));
  bot.command('pnl',c=>{const a=T.stats();c.reply(`📊 PnL (incl. paper)\nTrades: ${a.n} · ✅ ${a.wins} · 🔻 ${a.losses} · Win rate ${a.winRate.toFixed(1)}%\nSOL in ${a.solIn.toFixed(4)} → out ${a.solOut.toFixed(4)}\nTotal: ${a.pnl>=0?'+':''}${a.pnl.toFixed(5)} SOL (${a.pnlPct.toFixed(1)}%)\nOpen: ${T.st.open.length}`)});
  const pend=new Map();
  bot.command('withdraw',async c=>{const [to,amt]=c.match.trim().split(/\s+/);const {PublicKey}=require('@solana/web3.js');
