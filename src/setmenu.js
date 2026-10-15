@@ -13,6 +13,8 @@ const META={
  Profit:{autoSweep:['Auto send profit nightly 23:55 WAT',B],capital:['Working capital SOL (never swept)',[0.1,0.3,0.5,1]],profitAddress:['Wallet that receives profit','text'],profitReserveSol:['SOL kept for fees',[0.002,0.003,0.01]]},
  Wallet:{rotateEveryTrades:['New burner every N trades (0=off)',[0,10,25,50]],rotateDaily:['New burner every day',B],sweepTokens:['Also move tokens when rotating',B]},
  Alerts:{alerts:['Which coins to alert on',['trades','score','all','off']],missedAlerts:['Alert when skipped coins pump',B],missedAlertPct:['First missed alert at gain %',[50,100,200]],missedMinMcap:['Missed pump only counts if mcap ≥ $',[5000,10000,25000]],missedMinLiq:['…and liquidity ≥ $',[2000,5000,10000]],missedMinVol1h:['…and 1h volume ≥ $ (or 5m ≥ missedMinVol5m)',[1000,2000,5000]],missedMinVol5m:['5m volume floor $',[100,200,500]],missedBaseLiq:['Ignore skip prices from pools under $ liq',[500,1000,2000]],autotune:['Auto-apply tuned thresholds',B]}};
+const {L:LB,CAPPED}=require('./labels');const unl=()=>S.paper===true&&S.paperUnlimited===true;const nm=k=>(LB[k]?.[0]||k);const val=k=>{const u=LB[k]?.[1];const v=short(S[k]);return u==='$'?'$'+v:u?v+(u==='%'||u==='×'?'':' ')+u:v};const offT=k=>unl()&&CAPPED.includes(k)?' (off in unlimited test)':'';
+const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const catOf=k=>Object.keys(META).find(c=>k in META[c]);
 const fmt=v=>typeof v==='boolean'?(v?'ON ✅':'OFF ⛔'):String(v);
 const short=v=>{v=fmt(v);return v.length>10?v.slice(0,4)+'…'+v.slice(-4):v};
@@ -25,11 +27,11 @@ function setValue(k,raw){raw=String(raw).trim();const t=META[catOf(k)]?.[k]?.[1]
  C.save();return null;}
 const home=()=>{const k=new InlineKeyboard();CATS.forEach((c,i)=>{k.text(c,'sm:c:'+i);if(i%3===2)k.row()});return k.row().text('♻️ Reset all to defaults','sm:resetask');};
 const cat=i=>{const c=CATS[i];const k=new InlineKeyboard();Object.keys(META[c]).forEach((key,j)=>{const t=META[c][key][1];
- if(t===B)k.text(`${S[key]?'✅':'⛔'} ${key}`,'sm:t:'+key);else k.text(`${key}: ${short(S[key])}`,'sm:k:'+key);if(j%2)k.row()});return k.row().text('⬅️ Back','sm:home');};
+ if(t===B)k.text(`${S[key]?'✅':'⛔'} ${nm(key)}`,'sm:t:'+key);else k.text(`${nm(key)}: ${val(key)}${offT(key)}`,'sm:k:'+key);if(j%2)k.row()});return k.row().text('⬅️ Back','sm:home');};
 const one=key=>{const [desc,t]=META[catOf(key)][key];const k=new InlineKeyboard();
  if(t===B)k.text(S[key]?'Turn OFF':'Turn ON','sm:t1:'+key);else if(Array.isArray(t))t.forEach(v=>k.text((String(S[key])===String(v)?'• ':'')+v,`sm:v:${key}:${v}`));
  k.row();if(t!==B)k.text('⌨️ Type a value','sm:type:'+key);k.text('↩️ Reset to default','sm:def:'+key).row().text('⬅️ Back','sm:c:'+CATS.indexOf(catOf(key)));
- return [`⚙️ <b>${key}</b>\n${desc}\n\nNow: <b>${fmt(S[key])}</b>\nDefault: ${fmt(D[key])}`,k];};
+ return [`⚙️ <b>${esc(nm(key))}</b>${esc(offT(key))}\n${esc(desc)}\n<i>Setting name: ${key}</i>\n\nNow: <b>${fmt(S[key])}</b>\nDefault: ${fmt(D[key])}`,k];};
 const KEEP=['auto','paper','capital','profitAddress','lastSweepDay','lastAutoTuneDay'];
 function resetAll(){for(const k of Object.keys(D))if(!KEEP.includes(k))S[k]=D[k];S.auto=true;S.paper=true;C.save();}
 const waiting=new Map();

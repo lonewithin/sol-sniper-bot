@@ -1,134 +1,86 @@
 // Beginner-friendly /help with section buttons.
 const {InlineKeyboard}=require('grammy');
 const SEC={
-start:['🚀 Getting started',`<b>What this bot does</b>
-It watches for brand-new Solana tokens, gives each one a <b>safety score</b> (how likely it's a scam) and a <b>potential score</b> (how strong its momentum is), and alerts you. If you allow it, it can buy and sell on its own.
+start:['🚀 Start here',`<b>What this bot does</b>
+It finds new Solana meme coins, checks they look safe, and buys and sells them for you.
+Right now it runs in <b>paper mode</b>: fake money, real prices. No real SOL moves.
 
-<b>Quick start (do these in order)</b>
-1️⃣ /wallet: shows your bot's <b>burner wallet</b> address. Send it a SMALL amount of SOL (e.g. 0.3). Never use your main wallet.
-2️⃣ /export CONFIRM: back up the burner key and save it offline (the message deletes itself after 60s).
-3️⃣ <code>/set capital 0.3</code>: tell the bot how much SOL is your working money, so only profit above it gets swept.
-4️⃣ Test first: /paper on (on by default) then /auto on. The bot "pretends" to trade with real prices and no real money.
-5️⃣ Let it run for a day or more, then check /stats and /pnl.
-6️⃣ Happy? /paper off to go LIVE. Panic? /panic sells everything and stops.
+<b>Two strategies</b>
+🎯 <b>Snipe</b>: very young coins, held for minutes.
+🐋 <b>Big Play</b>: older coins with traction, held for hours.
 
-<b>Basic commands</b>
-/start: say hi · /help: this guide · /settings: all current settings
-/set: <b>tap-to-change settings menu</b> (categories → setting → quick picks, type a value, or reset to default)
-/set &lt;name&gt; &lt;value&gt;: change one directly, e.g. <code>/set buySol 0.02</code>
-/reset: put all settings back to defaults (keeps wallets, capital, profit address, history)`],
-buy:['🛒 Buying',`/auto on|off: let the bot buy by itself. <i>Default: off</i>
-/paper on|off: on = test mode, fake trades. off = LIVE, real SOL. <i>Default: on</i>
-/check &lt;token address&gt;: score any token now, with Buy buttons
-💲 <b>Coin lookup</b>: just send <code>$BONK</code>, <code>$&lt;address&gt;</code> or paste an address. You get a full card: price, mcap, liquidity, volume, changes, buys/sells, holders, age, safety (hard/soft reasons), potential + tier, whether the bot holds it, and buttons for links, Buy 0.02/0.05 (paper-safe) and Refresh. If several coins share a ticker, you pick from the top 3.
-Alerts have <b>Buy 0.02 / Buy 0.05</b> buttons for a manual buy.
+Tap a section below to learn each part. Change any rule in /set.`],
+tiers:['🎯 Snipe tiers',`Each coin gets a <b>potential score</b> (0–100). The score picks the tier.
 
-<b>Settings</b>
-• <code>buySol</code>: SOL per buy. <i>0.02</i> · e.g. <code>/set buySol 0.03</code>
-• <code>maxPerTrade</code>: hard limit per buy. <i>0.1</i>
-• <code>maxDailySol</code>: most SOL it can spend per day. <i>0.2</i>
-• <code>maxOpen</code>: most coins held at once. <i>3</i>
-• <code>slippageBps</code>: allowed price slip (100 = 1%). <i>1500</i> (15%)
-• <code>priorityLamports</code>: fee to get in faster. <i>100000</i> (0.0001 SOL)
-• <code>sizeByPotential</code> on|off: buy more on stronger coins, still within limits. <i>on</i>
-• <code>mode</code> safe|fast: <b>safe</b> waits for full checks (~20s). <b>fast</b> ⚡ buys instantly at launch/migration, checks after, and sells if it fails. <i>safe</i>
-• <code>fastMigrations</code> on|off: fast-buy coins moving to PumpSwap. <i>on</i>
-• <code>fastNewLaunches</code> on|off: fast-buy brand-new launches (very risky). <i>off</i>
-• <code>jitoTipLamports</code>: optional Jito tip for speed. <i>0</i>`],
-sell:['📈 Selling & tiers',`The bot picks a <b>tier</b> from the potential score:
-• <b>SCALP</b> (≥ <code>potScalp</code> 42): quick in/out. Take profit +<code>scalpTp</code> 20%, stop loss −<code>scalpSl</code> 12%, max <code>scalpMaxMin</code> 4 min
-• <b>SWING</b> (≥ <code>potSwing</code> 55): TP +<code>swingTp</code> 50%, SL −<code>swingSl</code> 18%, trailing <code>swingTrail</code> 15%, max <code>swingMaxMin</code> 15 min
-• <b>RUNNER</b> (≥ <code>potRunner</code> 75): sells half at +<code>runnerPartialAt</code> 50%, trails the rest by <code>runnerTrail</code> 20%, SL −<code>runnerSl</code> 25%, max <code>runnerMaxMin</code> 30 min
-• <code>momentumExit</code>: sell early if potential drops below this. <i>20</i>
-• <code>fastMaxMin</code>: max hold for fast-mode buys. <i>5</i>
-<i>Trailing</i> = it sells once the price falls that % from its highest point.
-• <code>trailArmPct</code>: for SECOND/RUNNER/BIG the trailing stop only switches on after the coin is up this %. <i>30</i>
-• <code>trailGraceMin</code>: …or after this many minutes. The normal stop loss still protects you meanwhile. <i>3</i>
-• Trail size per strategy: <code>swingTrail</code> 15 · <code>runnerTrail</code> 20 · <code>secondChanceTrail</code> 20 · <code>bigTrail</code> 20
-• After a partial take-profit, the stop moves to <b>breakeven</b>, so the rest can't turn into a loss.
-Every sell message explains the exit in plain words.
+<b>Scalp</b> (score 42+): small buy (0.4× size). Takes profit at +20%, stop loss at −12%, max 4 min.
+<b>Swing</b> (55+): 0.8× size. Takes profit at +50%, stop loss at −18%, 15% trailing stop, max 15 min.
+<b>Runner</b> (75+): 1.5× size. Sells half at +50%, stop loss at −25%, 20% trailing stop, max 30 min.
 
-/strategy: the live rules · /positions: what you hold
-/sellall: sell everything · /panic: auto OFF + sell everything`],
-safe:['🛡 Safety',`<b>Safety score (0–100)</b>. ⛔ <b>HARD</b> blockers (never bought, not even on a second chance): creator can mint, creator can freeze, can't sell (honeypot/no route), RugCheck says rugged. ⚠️ <b>soft</b> penalties lower the score only.
- takes points off for: the creator can still mint or freeze, tiny liquidity, a few wallets holding most coins, LP not locked, the dev holding a lot, can't sell back (honeypot), or flagged as rugged.
-⚠️ No score can promise a coin won't rug.
+Runners also have a <b>profit lock</b>: once up 20%, it sells if the gain falls back to +3%.
+Runners skip thin pools (under $20k) and coins that jumped over 10% during the confirm wait.`],
+second:['🔁 Second chance',`If the bot skipped a coin and it then pumps, second chance can buy it later at a smaller size.
+It never re-buys coins with hard safety flags, coins first skipped as a spike, or coins that failed confirmation.
+<b>It is OFF by default</b>, because 3 of its 4 test trades lost.`],
+big:['🐋 Big Play',`Big Play buys older coins (at least 1 hour old) with market cap $100k–$10M and liquidity of $50k or more.
+It needs buyers to outnumber sellers and volume to be rising.
 
-• <code>minScore</code>: lowest safety score allowed to buy. <i>70</i>
-• <code>minEntryPc5</code>: skip coins already falling more than this in the last 5 min (RUNNER exempt). <i>-5</i>
-• <code>maxEntryPc5</code>: skip SCALP/SWING coins already up more than this in 5 min. <i>20</i>
-• <code>runnerMaxEntryPc5</code>: RUNNER spike cap, skip RUNNER coins up more than this in 5 min (0=off). <i>40</i>
-• <code>runnerMinLiq</code>: RUNNER thin-pool guard, skip RUNNER coins with liquidity under this $ (0=off). <i>20000</i>
-• <code>minEntryVol5m</code>: skip coins with under this much $ volume in the last 5 min. <i>1000</i>
-• <code>minLiqUsd</code>: lowest liquidity in $ to buy or alert. <i>5000</i>
-• <code>fastMaxDevPct</code>: fast mode skips if the dev bought more than this %. <i>10</i>
-• <code>maxCreatorLaunches</code>: skip creators who launch many coins. <i>1</i>
-• <code>fastPostMinScore</code>: fast-mode buys sell if the after-check is below this. <i>40</i>
-• <code>fastPostCheckSec</code>: seconds after a fast buy to check. <i>8</i>
-🔁 <b>Second chance</b>: if a coin it skipped later runs +<code>secondChanceGainPct</code> (50%) with strong buying, rising volume, enough liquidity, holders not falling, and NO hard blockers, it buys a smaller bag even if safety is below minScore. It exits RUNNER-style (sells half at +50%, trails the rest) with a tighter stop loss.
-• <code>secondChance</code> on|off. <i>on</i>
-• <code>secondChanceMinScore</code>: lowest safety allowed. <i>45</i>
-• <code>secondChanceSize</code>: × normal buy size. <i>0.5</i>
-• <code>secondChanceSl</code>: stop loss %. <i>15</i>
-• <code>secondChanceGainPct</code>: how much it must have run since the skip. <i>50</i>
-• <code>secondChanceMinRatio</code>: min buys÷sells in the last 5 min. <i>1.3</i>
-• <code>alerts</code> all|trades|score|off: <b>trades</b> = only tell me about coins it buys, <b>score</b> = coins that pass safety + potential, <b>all</b> = everything it checks. <i>trades</i> · e.g. <code>/set alerts score</code>
-Only YOUR Telegram account can control this bot.`],
-wallet:['👛 Wallets & burners',`A <b>burner</b> is a throwaway wallet only this bot uses. Keep small amounts in it.
-/wallet: active burner address + balance
-/burners: all burners with balances
-/newburner: make a new burner, move SOL into it, DM you its key (deletes in 60s)
-/export CONFIRM: back up the active key · <code>/export 2 CONFIRM</code> or <code>/export all CONFIRM</code>
-/withdraw &lt;address&gt; &lt;amount|all&gt;: send SOL out (asks you to confirm)
-• <code>rotateEveryTrades</code>: new burner every N trades (0 = off). <i>0</i>
-• <code>rotateDaily</code> on|off: new burner every day. <i>off</i>
-• <code>sweepTokens</code> on|off: also move tokens when rotating. <i>off</i>
-Import a key into Phantom: Add wallet → Import Private Key → paste.
-Note: moving SOL between burners links them on-chain.`],
-profit:['💰 Profit',`Every night at 23:55 WAT the bot can send profit (balance minus your capital) to your profit wallet.
-/profit: menu with mode, address, today's PnL, and [Switch Auto/Manual] [Send now] buttons
-/sweep: send profit now (asks to confirm)
-• <code>capital</code>: your working money. It's never swept. <b>Must be set</b>, e.g. <code>/set capital 0.3</code>. <i>0</i>
-• <code>profitAddress</code>: where profit goes. <i>3mvv…LWx1MR</i>
-• <code>autoSweep</code> on|off: on = sends nightly, off = just reminds you. <i>on</i>
-• <code>profitReserveSol</code>: SOL kept for fees. <i>0.003</i>
-A preview is always shown first. In test mode nothing is sent.`],
-win:['🏆 Win-rate rules',`<b>Extra filters on every strategy</b> (change in /set → Win rate)
-• <code>confirmSec</code>: after a fresh snipe signal, wait this long and buy only if ≥ <code>confirmMinBuys</code> new buys came in, price fell no more than <code>confirmMaxDropPct</code>% , price rose no more than <code>confirmMaxRisePct</code>% (chase guard; RUNNERs use <code>runnerConfirmMaxRisePct</code>, default 10), and 5m buys ≥ sells. <i>90 · 3 · 10 · 20</i>
-• <code>holderCheck</code>: skip if top 10 holders (pool excluded) own more than <code>maxTop10Pct</code>% or the dev owns more than <code>maxDevHoldPct</code>%. Sniper, second chance and Big Play. <i>on · 30 · 10</i>
-• <code>earlyTpAt</code> / <code>earlyTpPct</code>: sniper + second chance sell <code>earlyTpPct</code>% at +<code>earlyTpAt</code>%, then the rest has a breakeven stop. <i>25 · 35</i>
-• Sizes: <code>runnerSize</code> 1.5×, <code>swingSize</code> 0.8×, <code>scalpSize</code> 0.4× of buySol. SCALP also needs 5m buys÷sells ≥ <code>scalpMinRatio</code> <i>1.5</i>
-• <code>lossStreakN</code> / <code>lossPauseMin</code>: after 3 losses in a row, snipe + second chance pause 30 min. <i>3 · 30</i>
-• <code>paperCostPct</code>: paper sells lose this % plus the priority fee, so test PnL is realistic. <i>1.5</i>
-Trades are tagged with a version (<code>ver</code>) so before/after can be compared.`],
-sig:['📡 Signals',`<b>Extra signals</b> (change in /set → Signals; /reset restores these)
-• <code>smartWallets</code>: the bot learns wallets that bought early in past winners (our wins + missed 2x pumps), saved in data/smartwallets.json, and watches them. When ≥ <code>smartMinWallets</code> buy the same coin within <code>smartWindowMin</code> min, potential +<code>smartBoost</code> and Big Play checks it. <i>on · 2 · 30 · 15</i>
-• <code>trending</code>: coins on DexScreener's top/latest boosts get potential +<code>trendBoost</code> (safety rules still apply) and are fed to Big Play. <i>on · 10</i>
-• <code>todFilter</code>: tracks profit by WAT hour. Once an hour has ≥ <code>todMinTrades</code> trades and is losing (win &lt; 40%, PnL &lt; 0), buys are sized × <code>todLosingSize</code>. Until then it only logs. <i>on · 5 · 0.5</i>
-• <code>autoTune</code>: at 00:30 WAT it reviews the last 24h per tier and moves stop-loss / take-profit by at most 10% toward what worked, inside hard limits, then messages you. Paper mode only. <i>on</i>`],
-big:['🐋 Big Play',
-`<b>Two strategies</b>, each with its own on/off:
-/snipe on|off: 🎯 fast hunting of brand-new coins (minutes). <i>on</i>
-/bigplay on|off: 🐋 established coins with real traction, held for hours. <i>on</i>
-Both also need /auto on. /settings has buttons for both.
-
-<b>How Big Play picks coins</b>: trending/boosted DexScreener coins with market cap between <code>bigMinMcap</code> ($100k) and <code>bigMaxMcap</code> ($20M), liquidity ≥ <code>bigMinLiq</code> ($50k), age ≥ <code>bigMinAgeH</code> (1h), 1h volume above the 6h average, buys÷sells ≥ <code>bigMinRatio</code> (1.2), holders growing, safety ≥ <code>bigMinScore</code> (60), no ⛔ hard blockers. It enters on <b>momentum</b> (going up now) or a <b>pullback</b> (big 6h run, small 1h dip).
-<b>Selling</b>: sells half at +<code>bigPartialAt</code> 50%, trails the rest by <code>bigTrail</code> 20%, stop loss −<code>bigSl</code> 25%. If it never peaks +<code>bigFlatPct</code> 5% within <code>bigFlatMin</code> 50 min, or it peaks a little then falls back under +<code>bigGaveBackPct</code> 2%, it exits to free the budget. Checks every <code>bigPollSec</code> 45s.
-<b>Budget</b> (fixed amounts you set, any size): <code>bigBuySol</code> 0.05 SOL per trade · <code>bigMaxDailySol</code> 0.3 SOL/day · <code>bigMaxOpen</code> 3 · scan every <code>bigScanMin</code> 5 min. Change with /set bigBuySol 0.5 etc.\n<b>Riding winners</b>: after <code>bigBaseHoldH</code> 4h, if it's still above its trailing stop and the 1h trend is up, the hold extends by <code>bigExtendH</code> 2h at a time, up to <code>bigMaxHoldH</code> 24h.
-/stats → 🐋 Big Play page.`],
- test:['🧪 Testing & stats',`/pnl: PnL today / 7d / all time, by strategy, open (unrealised), best/worst, paper vs live, plus an equity-curve chart
-<code>/gpnl [window]</code>: coins bought since test start (or in a window like 1h, 30m, 6h, 1d, 7d): spent, returned, open value, net PnL, win rate, snipe vs Big Play
-<code>/pnl $TICKER</code>: shareable PROM card: move since the bot first scanned it, plus entry/exit/PnL if it aped
-<code>/c $TICKER</code> (or mint / DexScreener link): candle chart image with 5m/15m/1h/4h buttons, price, mcap, liq, changes and our position
-/stats: dashboard with buttons. <b>Overview</b> (today/all-time, win rate bar, PnL), <b>Hunting</b> (sources, skip reasons, speed), <b>Trades</b> (by tier, best/worst, last 5), <b>Wallet</b> (balance, capital, profit, open positions)
+<b>Size</b>: fixed 0.05 SOL per trade.
+<b>Exits</b>: sells half at +50%. The rest rides a 25% trailing stop. Stop loss −25%.
+<b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
+<b>Flat exit</b>: sells after 50 min if it never got above +5%.`],
+runner:['🏃 Runner path',`A Big Play entry for young coins already trending.
+It needs a 1h gain of 15%+ and a 6h gain of 40%+, rising 5m volume, and 15+ buyers in 5 min.
+It skips coins that rose more than 10% in the last 5 min or more than 400% in the last hour (likely blow-offs).
+It uses a 30% trailing stop.`],
+dip:['📉 Dip reclaim',`Big Play keeps watching good coins for 6 hours, including ones it skipped for holders or got stopped out of.
+If a coin drops 25% or more from its high, the bot waits for it to <b>recover</b>:
+• price back above the last check and above the dip low
+• more buys than sells, and rising volume
+• liquidity still at least 70% of where it was
+Then it re-checks safety. The dev must hold 10% or less, and the top 10 holders 80% or less.
+Turn it on or off in /set → Big Play → Dip reclaim.`],
+exits:['📈 Exits',`<b>Stop loss</b>: sells if the price falls a set % below your buy.
+<b>Take profit</b>: sells everything at a target gain.
+<b>Early take-profit</b>: at +25%, sells 35%, and moves the stop on the rest to breakeven.
+<b>Sell half</b>: at the target, sells 50% and lets the rest ride.
+<b>Trailing stop</b>: once up, sells if the price falls a set % from its best point.
+<b>Breakeven stop</b>: after taking some profit, sells if the price returns to your buy.
+<b>Time limit</b>: sells when the max hold time is up.`],
+safe:['🛡 Safety checks',`<b>Hard blocks</b> (never bought): the creator can still mint or freeze, you can't sell, or a known rug.
+<b>Safety score</b>: snipes need 70+, and Big Play needs 60+.
+<b>Holders</b>: the top 10 wallets may hold up to 30%, and the dev up to 10%.
+<b>Confirm wait</b>: after a signal, it waits 90 sec and buys only if 3+ new buyers arrived and the price didn't drop over 10% or jump over 20%.
+<b>Entry window</b>: skips 5m spikes over 20% and coins dumping without strong buyers.
+<b>Loss pause</b>: after 3 losses in a row, snipes pause for 30 min.`],
+size:['📏 Sizing',`Snipe base size is 0.02 SOL. Tier multipliers: scalp 0.4×, swing 0.8×, runner 1.5×.
+No buy is bigger than the max-per-buy limit (0.1 SOL).
+In losing hours of the day, the size can be cut by half.
+Big Play is always a fixed 0.05 SOL.
+Paper trades take off 1.5% per sell for fees and slippage, so results stay realistic.`],
+unl:['♾ Unlimited test',`<b>paperUnlimited</b> is a paper-only test setting.
+When it is on, it turns off the daily SOL limits, the max coins at once, and the loss pause, and it acts as if the balance were endless.
+Trade sizes stay the same, so profit and loss stay comparable.
+<b>It never works in live mode.</b> If paper is off, every limit comes back.`],
+cmds:['📋 Commands',`/help: this guide
+/gpnl: profit and loss since the test started (or /gpnl 1h, 1d)
+/pnl: PnL summary. /pnl $TICKER for one coin
+/stats: dashboard with buttons
 /positions: open trades
-👀 <b>Missed pumps</b>: the bot keeps watching coins it skipped (up to 6h) and tells you if one goes 2x / 5x / 10x, with why it skipped it. See /stats → Missed for skip accuracy.
-• <code>missedAlerts</code> on|off: send missed-pump alerts. <i>on</i>
-• <code>missedAlertPct</code>: first alert at this % gain. <i>100</i> (= 2x)
-It only counts a real market: mcap ≥ <code>missedMinMcap</code> $10k, liquidity ≥ <code>missedMinLiq</code> $5k (bonding-curve coins use mcap + volume), volume ≥ <code>missedMinVol5m</code> $200/5m or <code>missedMinVol1h</code> $2k/1h. The price is measured on one pool, and the start price only counts from a pool with ≥ <code>missedBaseLiq</code> $1k liquidity. Second-chance buys use the same check.
-• <code>autotune</code> on|off: auto-apply the suggested settings once there's enough data (100+ coins). <i>off</i>
-• <code>trailingPct</code>: extra trailing stop for any trade (0 = off). <i>0</i>
-Tip: run in test mode (/paper on) for a few days, check /stats, adjust with /set, THEN go live.`]};
+/strategy: tier rules now in use
+/set or /settings: all settings with buttons
+/reset: settings back to defaults
+/auto on|off: let the bot buy by itself
+/snipe on|off, /bigplay on|off: each strategy
+/paper on|off: test mode (keep on)
+/check ADDRESS: score a coin
+/c $TICKER: coin chart
+/sellall: sell every open coin
+/panic: stop buying and sell everything
+/wallet, /burners, /newburner: burner wallets
+/export: back up the burner key (keep it private)
+/withdraw: send SOL out
+/profit, /sweep: profit sweep
+/cancel: stop typing a value`]};
 const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]],i)=>{k.text((id===cur?'• ':'')+t,'help:'+id);if(i%2)k.row()});return k;};
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
