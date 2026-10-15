@@ -70,7 +70,7 @@ Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling
  bot.command('sellall',async c=>{const r=await T.sellAll('manual sellall');c.reply(`Sold ${r.length}`)});
  bot.command('panic',async c=>{S.auto=false;save();const r=await T.sellAll('PANIC');c.reply(`🛑 Auto OFF, sold ${r.length} positions`)});
  bot.command('check',async c=>{const d=await score(c.match.trim()).catch(e=>null);c.reply(d?fmt(d):'Failed',{parse_mode:'HTML',reply_markup:kb(d?.mint)})});
- bot.callbackQuery(/^buy:(.+):(.+)$/,async c=>{try{const p=await T.buy({mint:c.match[1]},Number(c.match[2]),{manual:true});c.answerCallbackQuery('Bought')}catch(e){c.answerCallbackQuery(e.message.slice(0,190))}});
+ bot.callbackQuery(/^buy:(.+):(.+)$/,async c=>{try{const m=c.match[1];const sym=await require('./potential').pairsFor([m]).then(r=>r[m]?.baseToken?.symbol).catch(()=>null);const p=await T.buy({mint:m,symbol:sym||undefined},Number(c.match[2]),{manual:true});c.answerCallbackQuery('Bought')}catch(e){c.answerCallbackQuery(e.message.slice(0,190))}});
  T.setNotify(say);return {bot,say};}
 const kb=m=>m&&new InlineKeyboard().text('Buy 0.02','buy:'+m+':0.02').text('Buy 0.05','buy:'+m+':0.05').row().url('DexScreener','https://dexscreener.com/solana/'+m).url('Solscan','https://solscan.io/token/'+m).url('pump.fun','https://pump.fun/coin/'+m);
 const fmt=d=>`<b>${d.symbol||'?'}</b> ${d.name||''} — score <b>${d.score}/100</b>\n<code>${d.mint}</code>\nLiq $${(d.liqUsd||0).toFixed(0)} · MC $${(d.mcap||0).toFixed(0)} · ${d.dex||''}\n`+d.reasons.join('\n');
