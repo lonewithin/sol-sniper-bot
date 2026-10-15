@@ -22,8 +22,14 @@ async function score(mint,hint={}){
  const r=rug.value;const pools=new Set((r?.markets||[]).flatMap(m=>[m.liquidityA,m.liquidityB,m.pubkey].filter(Boolean)));
  // top holders: exclude AMM pool vaults known from rugcheck markets
  let top10=null;
- if(r?.topHolders?.length){const h=r.topHolders.filter(x=>!x.insider||true).filter(x=>!pools.has(x.address)&&!pools.has(x.owner));top10=h.slice(0,10).reduce((a,x)=>a+(x.pct||0),0);}
+ const BURN=new Set(['1nc1nerator11111111111111111111111111111111','11111111111111111111111111111111']);
+ if(r?.lockers)for(const k of Object.values(r.lockers||{}))if(k?.tokenAccount)pools.add(k.tokenAccount);
+ if(r?.topHolders?.length){const seen=new Set();const h=r.topHolders.filter(x=>{const k=x.address;if(!k||seen.has(k))return false;seen.add(k);return !pools.has(x.address)&&!pools.has(x.owner)&&!BURN.has(x.owner)&&!BURN.has(x.address)});
+  // rugcheck pct is a percent; if amounts+supply known, recompute from raw amounts to avoid decimals/double-count errors
+  const sup=Number(r.token?.supply||0),dec=r.token?.decimals;
+  top10=h.slice(0,10).reduce((a,x)=>a+((sup>0&&x.amount!=null)?Number(x.amount)/sup*100:(x.pct||0)),0);}
  else if(large.value?.value&&d.supply){const v=large.value.value.slice(1,11);top10=v.reduce((a,x)=>a+Number(x.uiAmount||0),0)/d.supply*100;R.push('ℹ️ top10 excludes largest acct (assumed pool)');}
+ if(top10!=null&&!(top10>=0))top10=null;else if(top10!=null)top10=Math.min(100,top10);
  if(top10!=null){d.top10=+top10.toFixed(1);top10>50?pen(25,`Top10 hold ${d.top10}%`):top10>30?pen(10,`Top10 hold ${d.top10}%`):ok(`Top10 hold ${d.top10}%`);}
  if(r){d.rugScore=r.score_normalised;d.holders=r.totalHolders||null;const lp=Math.max(0,...(r.markets||[]).map(m=>m.lp?.lpLockedPct||0));d.lpLocked=+lp.toFixed(1);
   const pump=/pump/i.test(d.dex||'')||(r.markets||[]).some(m=>/pump/i.test(m.marketType||''));

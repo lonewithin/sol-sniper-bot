@@ -54,6 +54,13 @@ const buttons=calls=>{const r=[];for(const x of calls){const kb=x.p.reply_markup
  const qc=mintOf||'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pB263';
  r=await step('/c '+qc.slice(0,6)+'…',cmd('/c '+qc),15000);for(const b of [...new Set(buttons(r).map(b=>b.data))])await step('btn '+b.slice(0,12),cb(b,buttons(r).find(x=>x.data===b).msg),12000);
  await step('/c $BONK',cmd('/c $BONK'),15000);await step('/c (no arg → usage)',cmd('/c'),3000);results.at(-1).ok=!results.at(-1).errs.length;
+ // /gpnl: all, windows, typo alias, bad arg, empty
+ for(const q of ['/gpnl','/gpnl 1h','/gpnl 1 hour','/gpnl 30m','/gpnl 7d','/gnpl 24h']){const rr=await step(q,cmd(q),300);if(!/PnL/.test(rr.find(x=>x.p.text)?.p.text||''))results.at(-1).ok=false}
+ {const rr=await step('/gpnl bad (usage)',cmd('/gpnl xyz'));results.at(-1).ok=/Usage/.test(rr.find(x=>x.p.text)?.p.text||'')}
+ {const c0=T.st.closed,o0=T.st.open;T.st.closed=[];T.st.open=[];const rr=await step('/gpnl empty',cmd('/gpnl'));results.at(-1).ok=/No coins bought/.test(rr.find(x=>x.p.text)?.p.text||'');T.st.closed=c0;T.st.open=o0}
+ {const G=require('../src/gpnl');const now=Date.now(),c0=T.st.closed,o0=T.st.open;T.st.closed=[{tier:'SWING',solIn:0.02,solOut:0.03,pnl:0.01,opened:now-30*6e4},{tier:'BIG',solIn:0.05,solOut:0.04,pnl:-0.01,opened:now-3*36e5}];T.st.open=[{tier:'SCALP',solIn:0.02,last:0.025,opened:now-10*6e4}];
+  const a=G.compute(36e5,now).all,b=G.compute(864e5,now);const ok=a.n===2&&a.wins===1&&Math.abs(a.openVal-0.025)<1e-9&&b.all.n===3&&b.big.n===1&&b.snipe.n===2&&G.compute(6e4,now).all.n===0;
+  results.push({label:'gpnl math (window filter, split)',ok,ms:0,calls:'',errs:[],issues:ok?[]:[JSON.stringify(a)],first:''});T.st.closed=c0;T.st.open=o0}
  // /pnl summary + cards
  await step('/pnl',cmd('/pnl'),4000);await step('/pnl $'+sym,cmd('/pnl $'+sym),15000);await step('/pnl $BONK',cmd('/pnl $BONK'),15000);
  if(mintOf)await step('btn pc:',cb('pc:'+mintOf),15000);
