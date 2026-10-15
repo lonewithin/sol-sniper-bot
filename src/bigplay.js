@@ -21,7 +21,7 @@ function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.f
 // Runner path: young coin already trending (1h/6h) with rising 5m volume and buyers in control. Skips the 24h cap and 1h-vs-6h checks that block every live runner.
 function runnerFilter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,c=p.priceChange||{},t1=p.txns?.h1||{},t5=p.txns?.m5||{},v1=p.volume?.h1||0,v5=p.volume?.m5||0;
  const r1=((t1.buys||0)+1)/((t1.sells||0)+1),r5=((t5.buys||0)+1)/((t5.sells||0)+1);
- if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push('mcap');if(liq<S.runMinLiq)R.push('liq');if((c.h1||0)<S.runMinH1)R.push('h1 weak');if((c.h6??c.h1??0)<S.runMinH6)R.push('h6 weak');
+ if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push('mcap');if(liq<S.runMinLiq)R.push('liq');if((c.h1||0)<S.runMinH1)R.push('h1 weak');if(S.runMaxH1>0&&(c.h1||0)>S.runMaxH1)R.push('h1 blow-off');if((c.h6??c.h1??0)<S.runMinH6)R.push('h6 weak');
  if((c.m5||0)<0)R.push('m5 red');if((c.m5||0)>S.runMaxM5)R.push('m5 spike');if(r1<S.runMinRatio)R.push('1h buy/sell');if(r5<1)R.push('5m sells > buys');if(v5<Math.max(2000,(v1/12)*S.runMinVolAccel))R.push('5m vol not rising');if((t5.buys||0)<15)R.push('few 5m buyers');
  return R;}
 function entry(p){const c=p.priceChange||{};const m5=c.m5||0,h1=c.h1||0,h6=c.h6||0;
