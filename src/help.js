@@ -112,7 +112,7 @@ big:['🐋 Big Play',
 Both also need /auto on. /settings has buttons for both.
 
 <b>How Big Play picks coins</b>: trending/boosted DexScreener coins with market cap between <code>bigMinMcap</code> ($100k) and <code>bigMaxMcap</code> ($20M), liquidity ≥ <code>bigMinLiq</code> ($50k), age ≥ <code>bigMinAgeH</code> (1h), 1h volume above the 6h average, buys÷sells ≥ <code>bigMinRatio</code> (1.2), holders growing, safety ≥ <code>bigMinScore</code> (60), no ⛔ hard blockers. It enters on <b>momentum</b> (going up now) or a <b>pullback</b> (big 6h run, small 1h dip).
-<b>Selling</b>: sells half at +<code>bigPartialAt</code> 50%, trails the rest by <code>bigTrail</code> 20%, stop loss −<code>bigSl</code> 25%. It checks every <code>bigPollSec</code> 45s.
+<b>Selling</b>: sells half at +<code>bigPartialAt</code> 50%, trails the rest by <code>bigTrail</code> 20%, stop loss −<code>bigSl</code> 25%. If it never peaks +<code>bigFlatPct</code> 5% within <code>bigFlatMin</code> 50 min, or it peaks a little then falls back under +<code>bigGaveBackPct</code> 2%, it exits to free the budget. Checks every <code>bigPollSec</code> 45s.
 <b>Budget</b> (fixed amounts you set, any size): <code>bigBuySol</code> 0.05 SOL per trade · <code>bigMaxDailySol</code> 0.3 SOL/day · <code>bigMaxOpen</code> 3 · scan every <code>bigScanMin</code> 5 min. Change with /set bigBuySol 0.5 etc.\n<b>Riding winners</b>: after <code>bigBaseHoldH</code> 4h, if it's still above its trailing stop and the 1h trend is up, the hold extends by <code>bigExtendH</code> 2h at a time, up to <code>bigMaxHoldH</code> 24h.
 /stats → 🐋 Big Play page.`],
  test:['🧪 Testing & stats',`/pnl: PnL today / 7d / all time, by strategy, open (unrealised), best/worst, paper vs live, plus an equity-curve chart
