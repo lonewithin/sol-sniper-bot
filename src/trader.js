@@ -65,6 +65,7 @@ async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk|
   else if(r.partialAt&&!p.halfDone&&curCh>=r.partialAt){p.halfDone=true;await sell(p,`Partial take-profit: sold half at ${f1(curCh)} (target +${r.partialAt}%). Stop moved to breakeven; the rest rides with a ${trail}% trailing stop`,0.5);continue;}
   else if(r.tp&&curCh>=r.tp)why=`Take profit: hit ${f1(curCh)} (target +${r.tp}%)`;
   else if(trail&&armed&&p.peak>=10&&curCh<=p.peak-trail)why=`Trailing stop: fell ${(p.peak-curCh).toFixed(0)}% from its +${p.peak.toFixed(0)}% peak, locked ${f1(ch)}`;
+  else if(p.tier==='BIG'&&S.bigFlatMin>0&&!p.halfDone&&age>=S.bigFlatMin&&p.peak<S.bigFlatPct)why=`Time stop: flat for ${age.toFixed(0)} min (never reached +${S.bigFlatPct}%), freeing the budget. Total ${f1(ch)}`;
   else if(p.tier==='BIG'&&age>=(p.holdLim||r.maxMin)){const lim=p.holdLim||r.maxMin,next=lim+S.bigExtendH*60,pc=pairs[p.mint]?.priceChange||{};const mom=(pc.h1??0)>0&&(pc.m5??0)>=0;
    if(curCh>p.peak-trail&&mom&&S.bigExtendH>0&&next<=S.bigMaxHoldH*60){p.holdLim=next;notify(`<b>${label(p)}</b>\n⏳ Still running ${p.symbol} (${f1(ch)}, 1h ${(pc.h1??0).toFixed(1)}%): hold extended to ${(next/60).toFixed(0)}h (max ${S.bigMaxHoldH}h)`);}
    else why=`Time limit: held ${(lim/60).toFixed(0)}h${mom?'':', momentum faded'}, closed at ${f1(ch)}`;}

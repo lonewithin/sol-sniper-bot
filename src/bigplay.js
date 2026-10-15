@@ -12,9 +12,12 @@ function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.f
  if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push(`mcap $${(mc/1e3).toFixed(0)}k`);if(liq<S.bigMinLiq)R.push(`liq $${(liq/1e3).toFixed(0)}k`);
  if(age<S.bigMinAgeH)R.push(`age ${age.toFixed(1)}h`);if(!(v1>v6/6))R.push('1h vol not above 6h avg');if(ratio<S.bigMinRatio)R.push(`buy/sell 1h ${ratio.toFixed(2)}`);
  const t5=p.txns?.m5||{},c=p.priceChange||{};if((t5.buys||0)<(t5.sells||0))R.push('5m sells > buys');if((c.m5||0)<-3||(c.h1||0)<-10)R.push('dumping');if((p.volume?.m5||0)<1000)R.push('5m vol < $1k');
+ const v5=p.volume?.m5||0;if(v5<(v1/12)*S.bigMinVolAccel)R.push(`5m vol not rising (x${(v1?v5/(v1/12):0).toFixed(2)})`);if(v1<(v6/6)*S.bigMinVolAccel)R.push('1h vol not rising vs 6h');
+ const r5=((t5.buys||0)+1)/((t5.sells||0)+1);if(r5<S.bigMinRatio)R.push(`buy/sell 5m ${r5.toFixed(2)}`);
+ if((c.m5||0)<S.bigMinM5)R.push(`stalled 5m ${c.m5||0}%`);if((c.h24||0)>S.bigMaxH24)R.push(`already ran +${c.h24}% 24h`);if((c.h24||0)<-30||(c.h6||0)<-15)R.push('downtrend (dead-cat bounce)');
  return R;}
 function entry(p){const c=p.priceChange||{};const m5=c.m5||0,h1=c.h1||0,h6=c.h6||0;
- if(m5>0&&h1>0&&h1<80)return 'momentum';if(h6>20&&h1<0&&h1>-20&&m5>=0)return 'pullback';return null;}
+ if(m5>=S.bigMinM5&&h1>=S.bigMinH1&&h1<60&&h1>m5&&h6>=0)return 'momentum';if(h6>20&&h1<0&&h1>-20&&m5>=S.bigMinM5)return 'pullback';return null;}
 async function scan(log=console.log,{dry=false}={}){if(!dry&&!(S.bigplay&&S.auto))return [];const out=[];const mints=(await candidates()).filter(m=>!(cool.get(m)>Date.now()));
  const pairs=await pairsFor(mints);let pass=0;
  for(const m of mints){const p=pairs[m];const f=filter(p);if(f.length)continue;pass++;const e=entry(p);if(!e){continue}
