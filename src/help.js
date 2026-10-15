@@ -56,7 +56,7 @@ safe:['🛡 Safety',`<b>Safety score (0–100)</b>. ⛔ <b>HARD</b> blockers (ne
 
 • <code>minScore</code>: lowest safety score allowed to buy. <i>70</i>
 • <code>minEntryPc5</code>: skip coins already falling more than this in the last 5 min (RUNNER exempt). <i>-5</i>
-• <code>maxEntryPc5</code>: skip SCALP/SWING coins already up more than this in 5 min. <i>25</i>
+• <code>maxEntryPc5</code>: skip SCALP/SWING coins already up more than this in 5 min. <i>20</i>
 • <code>runnerMaxEntryPc5</code>: RUNNER spike cap, skip RUNNER coins up more than this in 5 min (0=off). <i>40</i>
 • <code>minEntryVol5m</code>: skip coins with under this much $ volume in the last 5 min. <i>1000</i>
 • <code>minLiqUsd</code>: lowest liquidity in $ to buy or alert. <i>5000</i>
