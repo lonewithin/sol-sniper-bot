@@ -51,7 +51,7 @@ const buttons=calls=>{const r=[];for(const x of calls){const kb=x.p.reply_markup
  await step('type bad value',cb('sm:type:bigBuySol'));const bad=await step('value abc (expect reject)',cmd('abc'));results.at(-1).ok=/❌/.test(bad.find(x=>x.p.text)?.p.text||'')&&!results.at(-1).errs.length;await step('/cancel',cmd('/cancel'));
  await step('btn sm:resetask',cb('sm:resetask'));await step('btn sm:resetno',cb('sm:resetno'));
  // /c + every timeframe button
- const qc=mintOf||'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pB263';
+ const qc=mintOf||'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'; // fallback when trade log is empty (fresh test); BONK's mint currently returns no DexScreener pairs
  r=await step('/c '+qc.slice(0,6)+'…',cmd('/c '+qc),15000);for(const b of [...new Set(buttons(r).map(b=>b.data))])await step('btn '+b.slice(0,12),cb(b,buttons(r).find(x=>x.data===b).msg),12000);
  await step('/c $BONK',cmd('/c $BONK'),15000);await step('/c (no arg → usage)',cmd('/c'),3000);results.at(-1).ok=!results.at(-1).errs.length;
  // /gpnl: all, windows, typo alias, bad arg, empty

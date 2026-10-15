@@ -29,7 +29,7 @@ async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  notify(`<b>${label(p)}</b>\n⚡ FAST BUY ${p.symbol} (${ev.txType})${p.paper?' [paper]':''}\nSOL in: ${sol} · detect→${tSent?'sent':'signed'} ${tSent?lat.detectToSent:lat.detectToSigned}ms\n${reasons.join(' ')}\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
 async function pumpSell(p,pct){const kp=W.load();const bytes=await F.build(kp.publicKey.toBase58(),'sell',p.mint,pct+'%',{pool:'auto',denomSol:false});const {sig}=await SND.signAndSend(bytes,kp);await SND.confirm(sig).catch(()=>{});return sig;}
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
- const r=rules(tier)||rules('SWING');
+ let r=rules(tier)||rules('SWING');if(tier==='BIG'&&features?.entry==='runner')r={...r,trail:S.runTrail};
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
  if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:S.maxPerTrade).toFixed(4);const big=tier==='BIG';const dk=(big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=big?S.bigMaxDailySol:S.maxDailySol;
  if(spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
