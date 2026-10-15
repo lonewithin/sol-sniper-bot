@@ -93,7 +93,7 @@ profit:['💰 Profit',`Every night at 23:55 WAT the bot can send profit (balance
 • <code>profitReserveSol</code>: SOL kept for fees. <i>0.003</i>
 A preview is always shown first. In test mode nothing is sent.`],
 win:['🏆 Win-rate rules',`<b>Extra filters on every strategy</b> (change in /set → Win rate)
-• <code>confirmSec</code>: after a fresh snipe signal, wait this long and buy only if ≥ <code>confirmMinBuys</code> new buys came in, price fell no more than <code>confirmMaxDropPct</code>% and 5m buys ≥ sells. <i>90 · 3 · 10</i>
+• <code>confirmSec</code>: after a fresh snipe signal, wait this long and buy only if ≥ <code>confirmMinBuys</code> new buys came in, price fell no more than <code>confirmMaxDropPct</code>% , price rose no more than <code>confirmMaxRisePct</code>% (chase guard), and 5m buys ≥ sells. <i>90 · 3 · 10 · 20</i>
 • <code>holderCheck</code>: skip if top 10 holders (pool excluded) own more than <code>maxTop10Pct</code>% or the dev owns more than <code>maxDevHoldPct</code>%. Sniper, second chance and Big Play. <i>on · 30 · 10</i>
 • <code>earlyTpAt</code> / <code>earlyTpPct</code>: sniper + second chance sell <code>earlyTpPct</code>% at +<code>earlyTpAt</code>%, then the rest has a breakeven stop. <i>25 · 35</i>
 • Sizes: <code>runnerSize</code> 1.5×, <code>swingSize</code> 0.8×, <code>scalpSize</code> 0.4× of buySol. SCALP also needs 5m buys÷sells ≥ <code>scalpMinRatio</code> <i>1.5</i>

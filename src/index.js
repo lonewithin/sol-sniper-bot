@@ -38,7 +38,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   console.log(`[confirm] ${d.symbol} waiting ${S.confirmSec}s (buys h1 ${pr?.txns?.h1?.buys??0}, price ${pr?.priceUsd})`);
   const b0=pr?.txns?.h1?.buys||0,p0=+(pr?.priceUsd||0);
   setTimeout(async()=>{try{const p2=(await pairsFor([t.mint]))[t.mint];const b1=p2?.txns?.h1?.buys||0,p1=+(p2?.priceUsd||0);const drop=p0&&p1?(1-p1/p0)*100:100;const m5=p2?.txns?.m5||{};
-   const fails=[];if(!p2)fails.push('no pair');if(b1-b0<S.confirmMinBuys)fails.push(`only ${b1-b0} new buys`);if(drop>S.confirmMaxDropPct)fails.push(`price -${drop.toFixed(1)}%`);if((m5.buys||0)<(m5.sells||0))fails.push('5m sells > buys');
+   const fails=[];if(!p2)fails.push('no pair');if(b1-b0<S.confirmMinBuys)fails.push(`only ${b1-b0} new buys`);if(drop>S.confirmMaxDropPct)fails.push(`price -${drop.toFixed(1)}%`);if(S.confirmMaxRisePct>0&&-drop>S.confirmMaxRisePct)fails.push(`price +${(-drop).toFixed(1)}% chase`);if((m5.buys||0)<(m5.sells||0))fails.push('5m sells > buys');
    console.log(`[confirm] ${d.symbol} +${b1-b0} buys, price ${drop>0?'-':'+'}${Math.abs(drop).toFixed(1)}% → ${fails.length?'SKIP: '+fails.join(', '):'BUY'}`);
    if(fails.length){CT.skip('confirm: '+fails[0].replace(/[\d.-]+%?/g,'').trim());MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'failed confirmation'});return}
    if(T.paused())return console.log('[pause] skip',d.symbol);await doBuy({...m.f,confirmBuys:b1-b0,confirmDrop:+drop.toFixed(1)})}catch(e){console.log('confirm err',e.message)}},S.confirmSec*1000);
