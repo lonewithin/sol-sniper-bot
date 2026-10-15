@@ -41,7 +41,8 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  notify(`<b>${label(p)}</b>\n🟢 BUY ${p.symbol}${manual?' (manual)':''}${p.paper?' [paper]':''}\nSOL in: ${sol} · potential ${pot??'-'} · safety ${safety??'-'}\nEntry: ${fp(entry)} SOL/token\nPlan: ${r.earlyAt&&(!r.tp||r.tp>r.earlyAt)?'sell '+Math.round(r.earlyFrac*100)+'% at +'+r.earlyAt+'% ':''}${r.tp?'TP +'+r.tp+'% ':''}${r.partialAt?'sell 50% at +'+r.partialAt+'% ':''}SL -${r.sl}%${r.trail?' trail '+r.trail+'%':''} max ${r.maxMin}m\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
 async function value(p,amt=p.tokens){const q=await quote(p.mint,SOL,amt,S.slippageBps);return {q,sol:Number(q.outAmount)/LAMPORTS_PER_SOL};}
 async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tokens)*BigInt(Math.round(frac*1000))/1000n);
- let sol=0,sig='PAPER';try{const v=await value(p,amt);sol=v.sol;if(!p.paper)sig=await swap(v.q);}catch(e){if(p.paper){}else if(p.fast){sig=await pumpSell(p,Math.round(frac*100))}else throw e}
+ let sol=0,sig='PAPER';try{const v=await value(p,amt);sol=v.sol;if(!p.paper)sig=await swap(v.q);}catch(e){if(p.paper){ // paper: a failed/rate-limited sell quote must not book a fake -100%; use the value the monitor just quoted
+  if(p.last>0){sol=p.last*Number(amt)/Number(p.tokens);p.quoteFallback=true;console.log(`[paper] ${p.symbol} sell quote failed (${e.message}), using last quoted value ${sol.toFixed(5)} SOL`)}}else if(p.fast){sig=await pumpSell(p,Math.round(frac*100))}else throw e}
  if(p.paper&&sol>0)sol=Math.max(0,sol*(1-S.paperCostPct/100/(frac>=1?1:1))-S.priorityLamports/LAMPORTS_PER_SOL);
  const exit=sol/(Number(amt)/10**(p.decimals??6));
  if(frac<1){p.tokens=String(BigInt(p.tokens)-BigInt(amt));p.realized+=sol;p.partial=true;save();
