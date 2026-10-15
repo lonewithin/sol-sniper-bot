@@ -1,7 +1,10 @@
 const {Bot,InlineKeyboard}=require('grammy');const {settings:S,save,OWNER}=require('./config');const T=require('./trader');const W=require('./wallet');const {score}=require('./safety');
 function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.log('[bot error]',e.error?.message||e.message));
  // API guard: retry 429s (honour retry_after), never let a failed Telegram call reject (answerCallbackQuery 'too old', edit 'not modified', etc.)
+ // HTML safety: escape stray '<' and '&' (e.g. 'm5 < 0%') that are not part of a Telegram-supported tag/entity, so messages never fail with "Unsupported start tag"
+ const fixHtml=t=>typeof t==='string'?t.replace(/&(?!(amp|lt|gt|quot|#\d+);)/g,'&amp;').replace(/<(?!\/?(b|i|u|s|code|pre|a|tg-spoiler|blockquote)(\s[^<>]*)?>)/g,'&lt;'):t;
  const tgGuard=async(prev,method,payload,signal)=>{if(method==='getUpdates'||method==='getMe'||method==='deleteWebhook')return prev(method,payload,signal);
+  if(payload?.parse_mode==='HTML'){if(payload.text)payload.text=fixHtml(payload.text);if(payload.caption)payload.caption=fixHtml(payload.caption)}if(payload?.media?.parse_mode==='HTML'&&payload.media.caption)payload.media.caption=fixHtml(payload.media.caption);
   for(let i=0;;i++){let r;try{r=await prev(method,payload,signal)}catch(e){console.log('[tg net]',method,e.message);return {ok:true,result:method==='answerCallbackQuery'||method.startsWith('delete')?true:{}}}
    if(r.ok)return r;const ra=r.parameters?.retry_after;if(r.error_code===429&&ra&&i<3){console.log('[tg 429]',method,'retry in',ra,'s');await new Promise(z=>setTimeout(z,Math.min(ra,60)*1000));continue}
    if(!/not modified|query is too old/i.test(r.description||''))console.log('[tg fail]',method,r.error_code,r.description);return {ok:true,result:method==='answerCallbackQuery'||method.startsWith('delete')?true:{}}}};bot.api.config.use(tgGuard);bot.tgGuard=tgGuard;

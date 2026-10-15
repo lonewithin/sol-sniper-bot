@@ -27,6 +27,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   const card=()=>{CT.alerted();return bot.api.sendMessage(OWNER,`🆕 ${t.src} · <b>${m.tier}</b> potential ${m.potential}/100\n`+fmt(d)+'\n<i>'+m.reasons.join(' · ')+'</i>',{parse_mode:'HTML',reply_markup:kb(d.mint),link_preview_options:{is_disabled:true}}).catch(()=>{})};
   if(S.alerts==='all'&&!((d.liqUsd||0)<S.minLiqUsd&&d.score<S.minScore))card();
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
+  if(why&&why.startsWith('liquidity')&&m.tier!=='SKIP'&&!t.liqRecheck&&d.score>=S.minScore){t.liqRecheck=true;console.log(`[recheck] ${d.symbol} liq $${(d.liqUsd||0).toFixed(0)} looks unindexed, re-scoring in 60s`);setTimeout(()=>{q.push(t);pump()},60000);return}
   if(why){CT.skip(why);if(why!=='auto off'||true)MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why});return}
   const hc=await HC.check(t.mint,d);console.log(`[holders] ${d.symbol} top10 ${hc.top10??'?'}% dev ${hc.dev??'?'}% (${hc.src}) ${hc.ok?'OK':'SKIP: '+hc.fails.join(', ')}`);
   if(!hc.ok){CT.skip('holders concentrated');MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'holders concentrated'});return}
