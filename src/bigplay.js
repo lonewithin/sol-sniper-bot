@@ -26,16 +26,31 @@ function runnerFilter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCa
  return R;}
 function entry(p){const c=p.priceChange||{};const m5=c.m5||0,h1=c.h1||0,h6=c.h6||0;
  if(m5>=S.bigMinM5&&h1>=S.bigMinH1&&h1<60&&h1>m5&&h6>=0)return 'momentum';if(h6>20&&h1<0&&h1>-20&&m5>=S.bigMinM5)return 'pullback';return null;}
-async function scan(log=console.log,{dry=false}={}){if(!dry&&!(S.bigplay&&S.auto))return [];const out=[];const mints=(await candidates()).filter(m=>!(cool.get(m)>Date.now()));
- const pairs=await pairsFor(mints);let pass=0;
+
+// Dip reclaim: keep watching good candidates (bought, skipped on holders, or stopped out) for dipWatchH hours.
+// After a >= dipMinPct drop from the high since first seen, buy when price reclaims: above the previous sample,
+// low held above the dip low (higher low), 5m buys > sells, 5m volume rising, liquidity intact, safety OK.
+const dipW=new Map();
+function dipAdd(m,p,why){if(!S.bigDipReclaim||!p||dipW.has(m))return;dipW.set(m,{t:Date.now(),hi:+p.priceUsd,low:Infinity,dipped:false,prev:+p.priceUsd,pv5:p.volume?.m5||0,liq0:p.liquidity?.usd||0,why,done:false})}
+async function dipScan(pairs,log,dry){if(!S.bigDipReclaim)return;for(const [m,w] of dipW){if(w.done||Date.now()-w.t>S.dipWatchH*36e5){dipW.delete(m);continue}
+ const p=pairs[m];if(!p)continue;const px=+p.priceUsd,v5=p.volume?.m5||0,t5=p.txns?.m5||{},liq=p.liquidity?.usd||0;const prev=w.prev,pv5=w.pv5;w.prev=px;w.pv5=v5;
+ if(!w.dipped){w.hi=Math.max(w.hi,px);if(px<=w.hi*(1-S.dipMinPct/100)){w.dipped=true;w.low=px}continue}
+ if(px<w.low){w.low=px;continue}
+ const ok=px>prev&&px>w.low*1.03&&(t5.buys||0)>(t5.sells||0)&&v5>pv5&&(p.priceChange?.m5||0)>0&&liq>=w.liq0*0.7&&liq>=S.runMinLiq;if(!ok)continue;
+ w.done=true;if(T.st.open.find(x=>x.mint===m))continue;const d=await score(m).catch(()=>null);if(!d)continue;
+ const hc=await require('./holders').check(m,d);const fail=[];if(d.hard?.length)fail.push('hard');if(d.score<S.bigMinScore)fail.push('safety '+d.score);if(hc.dev!=null&&hc.dev>S.maxDevHoldPct)fail.push('dev '+hc.dev+'%');if(hc.top10!=null&&hc.top10>S.dipMaxTop10Pct)fail.push('top10 '+hc.top10+'%');
+ log(`[BIG] DIP RECLAIM ${d.symbol} (${w.why}) dip from ${w.hi} low ${w.low} now ${px} ${fail.length?'no: '+fail.join('; '):'BUY'}`);
+ if(!fail.length&&!dry)try{await T.buy({mint:m,symbol:d.symbol},S.bigBuySol,{tier:'BIG',safety:d.score,features:{entry:'dip',mcap:p.marketCap||p.fdv,liq,pc:p.priceChange}});require('./counters').bought()}catch(err){log('[BIG] buy skip '+err.message)}}}
+async function scan(log=console.log,{dry=false}={}){if(!dry&&!(S.bigplay&&S.auto))return [];const out=[];const mints=[...new Set([...(await candidates()).filter(m=>!(cool.get(m)>Date.now())),...dipW.keys()])];
+ const pairs=await pairsFor(mints);let pass=0;await dipScan(pairs,log,dry).catch(e=>log('[BIG] dip err '+e.message));
  for(const m of mints){const p=pairs[m];const f=filter(p);let e=f.length?null:entry(p);if(!e&&S.bigRunner&&p&&!runnerFilter(p).length)e='runner';if(!f.length||e==='runner')pass++;if(!e)continue;
   if(e==='runner')try{require('fs').appendFileSync(require('path').join(__dirname,'..','data','big_shadow.jsonl'),JSON.stringify({t:Date.now(),mint:m,symbol:p.baseToken?.symbol,price:+p.priceUsd,mc:p.marketCap||p.fdv,liq:p.liquidity?.usd,pc:p.priceChange})+'\n')}catch{}
   cool.set(m,Date.now()+30*6e4);const d=await score(m).catch(()=>null);if(!d)continue;
   const ph=holders.get(m);holders.set(m,d.holders);const fail=[];
   if(d.hard?.length)fail.push('hard: '+d.hard.join(', '));if(d.score<S.bigMinScore)fail.push(`safety ${d.score}`);if(ph&&d.holders&&d.holders<ph)fail.push('holders falling');{const hc=await require('./holders').check(m,d);if(!hc.ok)fail.push('holders: '+hc.fails.join(', '))}
-  const row={mint:m,symbol:d.symbol,mcap:p.marketCap||p.fdv,liq:p.liquidity?.usd,entry:e,safety:d.score,fail};out.push(row);
+  if(!fail.length||(d.score>=S.bigMinScore&&!d.hard?.length&&!fail.some(f=>/dev /.test(f))))dipAdd(m,p,e);const row={mint:m,symbol:d.symbol,mcap:p.marketCap||p.fdv,liq:p.liquidity?.usd,entry:e,safety:d.score,fail};out.push(row);
   log(`[BIG] ${d.symbol} mc $${((row.mcap||0)/1e6).toFixed(2)}M liq $${((row.liq||0)/1e3).toFixed(0)}k ${e} S${d.score} ${fail.length?'no: '+fail.join('; '):'BUY'}`);
   if(!fail.length&&!dry){try{await T.buy({mint:m,symbol:d.symbol},S.bigBuySol,{tier:'BIG',pot:potential(p,{safety:d.score,mint:m}).potential,safety:d.score,features:{entry:e,mcap:row.mcap,liq:row.liq,pc:p.priceChange}});require('./counters').bought()}catch(err){log('[BIG] buy skip '+err.message)}}}
  log(`[BIG] scan: ${mints.length} coins checked, ${pass} passed traction filters, ${out.length} scored, open ${T.st.open.filter(x=>x.tier==='BIG').length}/${S.bigMaxOpen}`);return out;}
 function start(log){const {rules}=require('./potential');for(const p of T.st.open)if(p.tier==='BIG'){p.rules=rules('BIG');if(p.features?.entry==='runner')p.rules.trail=S.runTrail}const run=()=>scan(log).catch(e=>log('[BIG] err '+e.message));setTimeout(run,15000);setInterval(run,S.bigScanMin*6e4);}
-module.exports={scan,start,filter,entry,runnerFilter,watch};
+module.exports={dipAdd,dipW,scan,start,filter,entry,runnerFilter,watch};
