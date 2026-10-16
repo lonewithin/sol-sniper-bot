@@ -39,7 +39,8 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
  const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=+(spent+sol).toFixed(6);
  const decimals=await dec(tok.mint);const entry=sol/(Number(q.outAmount)/10**decimals);
- const p={mint:tok.mint,symbol:tok.symbol||'?',solIn:sol,tokens:q.outAmount,tokens0:q.outAmount,realized:0,decimals,entry,peak:0,opened:Date.now(),sig,paper:S.paper,manual,tier,rules:r,pot,safety,features,ver:S.ver};st.open.push(p);save();W.countTrade();
+ let entryUsd=features?.px||null;if(entryUsd==null)try{const pr=(await pairsFor([tok.mint]))[tok.mint];entryUsd=+pr?.priceUsd||null}catch{}
+ const p={mint:tok.mint,symbol:tok.symbol||'?',solIn:sol,tokens:q.outAmount,tokens0:q.outAmount,realized:0,decimals,entry,entryUsd,peak:0,opened:Date.now(),sig,paper:S.paper,manual,tier,rules:r,pot,safety,features,ver:S.ver};st.open.push(p);save();W.countTrade();
  notify(`<b>${label(p)}</b>\n🟢 BUY ${p.symbol}${manual?' (manual)':''}${p.paper?' [paper]':''}\nSOL in: ${sol} · potential ${pot??'-'} · safety ${safety??'-'}\nEntry: ${fp(entry)} SOL/token\nPlan: ${r.earlyAt&&(!r.tp||r.tp>r.earlyAt)?'sell '+Math.round(r.earlyFrac*100)+'% at +'+r.earlyAt+'% ':''}${r.tp?'TP +'+r.tp+'% ':''}${r.partialAt?'sell 50% at +'+r.partialAt+'% ':''}SL -${r.sl}%${r.trail?' trail '+r.trail+'%':''} max ${r.maxMin}m\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
 async function value(p,amt=p.tokens){const q=await quote(p.mint,SOL,amt,S.slippageBps);return {q,sol:Number(q.outAmount)/LAMPORTS_PER_SOL};}
 async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tokens)*BigInt(Math.round(frac*1000))/1000n);
@@ -57,7 +58,8 @@ let pauseUntil=0,losses=0;function streak(c){if(c.tier==='BIG')return;if(c.pnl>0
 const paused=()=>Date.now()<pauseUntil;
 async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk||Date.now()-p.lastChk>=S.bigPollSec*1000);if(!due.length)return;const pairs=await pairsFor(due.map(p=>p.mint));
  for(const p of due){p.lastChk=Date.now();try{const r=p.rules||rules('SWING');const rest=Number(p.tokens)/Number(p.tokens0||p.tokens);
-  const {sol}=await value(p);p.last=sol;const ch=((sol+p.realized)/(p.solIn)-1)*100;const curCh=(sol/(p.solIn*rest)-1)*100;
+  let sol=null,dexFb=false;try{sol=(await value(p)).sol}catch(qe){const pr=pairs[p.mint],base=p.entryUsd||p.features?.px;if(pr?.priceUsd&&base>0){const curCh0=(+pr.priceUsd/base-1)*100;sol=p.solIn*rest*(1+curCh0/100);dexFb=true;if(p.fails%6===0)console.log(`[monitor] ${p.symbol} jup fail (${qe.message}), dex ${curCh0.toFixed(1)}%`)}else throw qe}
+  p.last=sol;const ch=((sol+p.realized)/(p.solIn)-1)*100;const curCh=(sol/(p.solIn*rest)-1)*100;if(pairs[p.mint]?.priceUsd)p.entryUsd=p.entryUsd||+pairs[p.mint].priceUsd/(1+curCh/100);
   p.peak=Math.max(p.peak||0,curCh);const age=(Date.now()-p.opened)/6e4;
   const m=potential(pairs[p.mint],{safety:p.safety||S.minScore,mint:p.mint});p.potNow=m.potential;let why=null;
   const f1=x=>(x>=0?'+':'')+x.toFixed(1)+'%';const armRule=['SECOND','RUNNER','BIG'].includes(p.tier);const trail=r.trail||S.trailingPct;
@@ -77,7 +79,10 @@ async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk|
    else why=`Time limit: held ${(lim/60).toFixed(0)}h${mom?'':', momentum faded'}, closed at ${f1(ch)}`;}
   else if(age>=r.maxMin)why=`Time limit: held ${r.maxMin>=120?(r.maxMin/60)+'h':r.maxMin+' min'}, closed at ${f1(ch)}`;
   else if(p.tier!=='BIG'&&age>=1&&m.potential<S.momentumExit&&pairs[p.mint])why=`Momentum faded: potential dropped to ${m.potential} (exit below ${S.momentumExit}), closed at ${f1(ch)}`;
-  if(why)await sell(p,why);p.fails=0;}catch(e){p.fails=(p.fails||0)+1;const age=(Date.now()-p.opened)/6e4,r=p.rules||rules('SWING');if(p.paper&&p.tier!=='BIG'&&age>=r.maxMin+5&&p.fails>=6){st.open=st.open.filter(x=>x!==p);const out=(p.last||0)+p.realized;const c={...p,solOut:out,exit:0,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why:'No sell quote (no route): closed at last known value',closed:Date.now(),holdMin:+age.toFixed(1),sellSig:'PAPER'};st.closed.push(c);L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why:c.why,holdMin:c.holdMin,paper:true,opened:c.opened,closed:c.closed});notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} [paper]\n📝 ${c.why}\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct.toFixed(1)}%) · held ${c.holdMin}m`)}}}save();}
+  if(why)await sell(p,why);p.fails=0;}catch(e){p.fails=(p.fails||0)+1;const age=(Date.now()-p.opened)/6e4,r=p.rules||rules('SWING');
+  // Paper: force-close when quotes stay dead (was non-BIG only — Macca BIG sat 4h then exited -41% past the -25% SL)
+  if(p.paper&&age>=(p.tier==='BIG'?Math.max(30,(r.maxMin||240)*0.25):r.maxMin+5)&&p.fails>=(p.tier==='BIG'?12:6)){st.open=st.open.filter(x=>x!==p);const out=(p.last||0)+p.realized;const c={...p,solOut:out,exit:0,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why:'No sell quote (no route): closed at last known value',closed:Date.now(),holdMin:+age.toFixed(1),sellSig:'PAPER'};st.closed.push(c);L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why:c.why,holdMin:c.holdMin,paper:true,opened:c.opened,closed:c.closed});notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} [paper]\n📝 ${c.why}\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct.toFixed(1)}%) · held ${c.holdMin}m`)}
+  else if(p.fails===1||p.fails%12===0)console.log(`[monitor] ${p.symbol} err (${p.fails}x): ${e.message}`)}}save();}
 const balance=async()=>UNL()?1e9:(await conn.getBalance(W.load().publicKey))/LAMPORTS_PER_SOL;
 const stats=()=>{const c=st.closed,w=c.filter(x=>x.pnl>0).length,i=c.reduce((a,x)=>a+x.solIn,0),o=c.reduce((a,x)=>a+x.solOut,0);return {n:c.length,wins:w,losses:c.length-w,winRate:c.length?w/c.length*100:0,solIn:i,solOut:o,pnl:o-i,pnlPct:i?(o/i-1)*100:0}};
 async function withdraw(to,amt){const {PublicKey,SystemProgram,Transaction,sendAndConfirmTransaction}=require('@solana/web3.js');const kp=W.load();const dest=new PublicKey(to);
