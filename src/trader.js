@@ -1,11 +1,12 @@
 const fs=require('fs'),path=require('path');const {Connection,VersionedTransaction,LAMPORTS_PER_SOL}=require('@solana/web3.js');
 const {settings:S,DATA,RPC,SOL}=require('./config');const {quote,rpc}=require('./safety');const j=require('./http');const W=require('./wallet');
 const {potential,pairsFor,rules}=require('./potential');const L=require('./log');
-let notify=()=>{};
+let notify=()=>{};const PEND={},PENDM=new Set();
 const label=p=>p.tier==='MOON'?'🌙 MOONBAG':p.tier==='BIG'?'💎 BIG PLAY':p.tier==='SECOND'?'🔁 SECOND CHANCE':`🎯 SNIPER · ${p.tier==='FAST'?'SCALP':(p.tier||'?')} · ${p.fast?'⚡ fast':'🛡 safe'}`;const dec=async m=>{try{return (await rpc('getTokenSupply',[m])).value.decimals}catch{return 6}};
 const fp=x=>x<1e-6?x.toExponential(3):x.toPrecision(4);
 const PF=path.join(DATA,'positions.json');let st={open:[],closed:[],daily:{}};try{st=JSON.parse(fs.readFileSync(PF))}catch{}for(const p of st.open)if(p.partial&&p.halfDone==null)p.halfDone=true;
-const save=()=>fs.writeFileSync(PF,JSON.stringify(st,null,1));const conn=new Connection(RPC,'confirmed');
+const save=()=>{for(const k of Object.keys(st.daily))if(k.replace(/^(moon|big):/,'')<new Date(Date.now()-14*864e5).toISOString().slice(0,10))delete st.daily[k]; /* drop old daily-cap counters */
+ const tmp=PF+'.tmp';fs.writeFileSync(tmp,JSON.stringify(st));fs.renameSync(tmp,PF)}; /* compact + atomic: a crash mid-write can't corrupt positions.json */const conn=new Connection(RPC,'confirmed');
 const today=()=>new Date().toISOString().slice(0,10);
 const SND=require('./send');const F=require('./fast');
 async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.ag/swap/v1/swap',{method:'POST',body:JSON.stringify({quoteResponse:q,userPublicKey:kp.publicKey.toBase58(),wrapAndUnwrapSol:true,dynamicComputeUnitLimit:true,prioritizationFeeLamports:S.priorityLamports})},15000);
@@ -15,7 +16,7 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
 const UNL=()=>S.paper===true&&S.paperUnlimited===true;
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  const usdF=require('./usdsize').on()?await require('./usdsize').solFor('FAST'):null;sol=usdF?usdF.sol:+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
+ if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint)||PENDM.has(ev.mint))throw new Error('already holding');PENDM.add(ev.mint);try{
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -28,9 +29,8 @@ async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  if(!tokens&&ev.vSolInBondingCurve&&ev.vTokensInBondingCurve)tokens=String(Math.floor(ev.vTokensInBondingCurve*1e6*(sol/(ev.vSolInBondingCurve+sol))));
  const r=rules('SCALP');const p={mint:ev.mint,symbol:ev.symbol||'?',solIn:sol,tokens:tokens||'0',tokens0:tokens||'0',realized:0,decimals:6,entry:tokens?sol/(Number(tokens)/1e6):0,peak:0,opened:Date.now(),sig,paper:S.paper,fast:true,tier:'FAST',rules:{...r,maxMin:S.fastMaxMin},pot:null,safety:null,lat,pendingPostCheck:true,ver:S.ver};
  st.open.push(p);save();W.countTrade();
- notify(`<b>${label(p)}</b>\n⚡ FAST BUY ${p.symbol} (${ev.txType})${p.paper?' [paper]':''}\nSOL in: ${sol} · detect→${tSent?'sent':'signed'} ${tSent?lat.detectToSent:lat.detectToSigned}ms\n${reasons.join(' ')}\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}
+ notify(`<b>${label(p)}</b>\n⚡ FAST BUY ${p.symbol} (${ev.txType})${p.paper?' [paper]':''}\nSOL in: ${sol} · detect→${tSent?'sent':'signed'} ${tSent?lat.detectToSent:lat.detectToSigned}ms\n${reasons.join(' ')}\n<code>${p.mint}</code>${p.paper?'':'\ntx: '+sig}`);return p;}finally{PENDM.delete(ev.mint)}}
 async function pumpSell(p,pct){const kp=W.load();const bytes=await F.build(kp.publicKey.toBase58(),'sell',p.mint,pct+'%',{pool:'auto',denomSol:false});const {sig}=await SND.signAndSend(bytes,kp);await SND.confirm(sig).catch(()=>{});return sig;}
-const PEND={},PENDM=new Set();
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
  const moon=tier==='MOON';let r=moon?require('./moon').rules():(rules(tier)||rules('SWING'));if(tier==='BIG'&&features?.entry==='runner')r={...r,trail:S.runTrail};
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
@@ -49,8 +49,8 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
 async function value(p,amt=p.tokens){const q=await quote(p.mint,SOL,amt,S.slippageBps);return {q,sol:Number(q.outAmount)/LAMPORTS_PER_SOL};}
 async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tokens)*BigInt(Math.round(frac*1000))/1000n);
  let sol=0,sig='PAPER';try{const v=await value(p,amt);sol=v.sol;if(!p.paper)sig=await swap(v.q);}catch(e){if(p.paper){ // paper: a failed/rate-limited sell quote must not book a fake -100%; use the value the monitor just quoted
-  if(p.last>0){sol=p.last*Number(amt)/Number(p.tokens);p.quoteFallback=true;console.log(`[paper] ${p.symbol} sell quote failed (${e.message}), using last quoted value ${sol.toFixed(5)} SOL`)}}else if(p.fast){sig=await pumpSell(p,Math.round(frac*100))}else throw e}
- if(p.paper&&sol>0)sol=Math.max(0,sol*(1-S.paperCostPct/100/(frac>=1?1:1))-S.priorityLamports/LAMPORTS_PER_SOL);
+  if(p.last>0){sol=p.last*Number(amt)/Number(p.tokens);p.quoteFallback=true;console.log(`[paper] ${p.symbol} sell quote failed (${e.message}), using last quoted value ${sol.toFixed(5)} SOL`)}else throw e} /* no price yet: retry next tick instead of booking a fake -100% */else if(p.fast){sig=await pumpSell(p,Math.round(frac*100))}else throw e}
+ if(p.paper&&sol>0)sol=Math.max(0,sol*(1-S.paperCostPct/100)-S.priorityLamports/LAMPORTS_PER_SOL);
  const exit=sol/(Number(amt)/10**(p.decimals??6));
  if(frac<1){p.tokens=String(BigInt(p.tokens)-BigInt(amt));p.realized+=sol;p.partial=true;save();
   notify(`<b>${label(p)}</b>\n🟡 PARTIAL SELL ${Math.round(frac*100)}% ${p.symbol}${p.paper?' [paper]':''}\n📝 ${why}\nSOL out: ${sol.toFixed(5)} · Exit ${fp(exit)} · ${require('./fmt').px(p.entry?(exit/p.entry-1)*100:0)} on the part sold`);return null;}
@@ -80,7 +80,6 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
    else if(p.halfDone&&!p.tp3&&S.moonTp3Pct>0&&curCh>=S.moonTp3At){p.tp3=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp3Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp3At}%)`,pc/left);continue;}
    else if(p.halfDone&&S.moonBreakeven&&curCh<=0)why=`🌙 Breakeven stop: after the first take-profit, price fell back to entry. Total ${f1(ch)}`;
    else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-r.trail/100))why=`🌙 Moonbag trail: fell ${r.trail}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
-   else if(p.tier!=='MOON'&&(why=require('./skills').volExit(p,pairs[p.mint],curCh,age)))0;
   else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
    if(why)await sell(p,why);p.fails=0;continue;}
   if(curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry (limit −${r.sl}%). Total ${f1(ch)}`;

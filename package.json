@@ -20,6 +20,7 @@
     "chart.js": "^3.9.1",
     "dotenv": "^18.0.8",
     "grammy": "^1.46.0",
+    "pureimage": "^0.4.20",
     "ws": "^8.22.0"
   },
   "private": false,

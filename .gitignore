@@ -6,3 +6,4 @@ data/
 *.enc
 !.env.example
 data.bak-*/
+scripts/__pycache__/

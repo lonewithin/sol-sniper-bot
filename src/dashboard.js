@@ -27,6 +27,6 @@ function bigp(){const c=T.st.closed.filter(x=>x.tier==='BIG'),o=T.st.open.filter
 const SECT={ov:['📋 Overview',overview],hu:['🎯 Hunting',hunting],tr:['📈 Trades',trades],wa:['👛 Wallet',wallet],mi:['👀 Missed',missed],bg:['💎 Big Play',bigp]};
 const kb=cur=>{const k=new InlineKeyboard();Object.entries(SECT).forEach(([id,[t]],i)=>{k.text((id===cur?'• ':'')+t,'st:'+id);if(i%2)k.row()});return k.row().text('🔄 Refresh','st:'+cur);};
 function install(bot){
- bot.command('stats',async c=>c.reply(await overview(),{parse_mode:'HTML',reply_markup:kb('ov')}));
+ bot.command('stats',async c=>{const t=await overview(),o={parse_mode:'HTML',reply_markup:kb('ov')};const r=require('./gpnl').compute(Date.now());if(!r.all.n)return c.reply(t,o);const T=require('./trader');return require('./pnlcard').sendWithCard(c,{title:'Dashboard · all trades',window:'all time',all:r.all,modes:[['Snipe',r.snipe],['Big Play',r.big],['Moonbag',r.moon]],paper:!!T.st.closed.some(p=>p.paper)},t,o)});
  bot.callbackQuery(/^st:(\w+)$/,async c=>{const id=c.match[1];c.answerCallbackQuery();if(SECT[id])c.editMessageText(await SECT[id][1](),{parse_mode:'HTML',reply_markup:kb(id)}).catch(()=>{})});}
 module.exports={install,overview};

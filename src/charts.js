@@ -1,5 +1,5 @@
 // /c chart, /pnl summary, /pnl $TICKER per-coin PROM card. Paper-safe: read-only, never trades.
-const fs=require('fs'),path=require('path');const {InlineKeyboard,InputFile}=require('grammy');let createCanvas=null;try{({createCanvas}=require('canvas'))}catch{console.log('[charts] canvas not installed, chart images off')}
+const fs=require('fs'),path=require('path');const {InlineKeyboard,InputFile}=require('grammy');let createCanvas=null;try{({createCanvas}=require('./canvas'));if(!require('./canvas').native)console.log('[charts] using pure-JS renderer (no native canvas)')}catch(e){console.log('[charts] image renderer unavailable: '+e.message)}
 const j=require('./http');const T=require('./trader');const {DATA,settings:S}=require('./config');const {resolve}=require('./lookup');const L=require('./log');
 const MINT=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;const SCANF=path.join(DATA,'scans.json');let scans={};try{scans=JSON.parse(fs.readFileSync(SCANF))}catch{}
 // first-detection record (kept forever, capped)
@@ -91,9 +91,9 @@ async function coinCard(q,who){const mint=await parseCoin(q),pr=await bestPair(m
 const WHO=c=>c.from?.username?'@'+c.from.username:(c.from?.first_name||'');
 const ERR=e=>e.message==='usage'?'Usage: /c $TICKER | mint | dexscreener link':'❌ '+(e.message||'failed');
 function install(bot){
- bot.command('c',async c=>{const w=await c.reply('📈 Drawing chart…');try{const r=await chartMsg(c.match);await c.replyWithPhoto(new InputFile(r.png,'chart.png'),{caption:r.cap,parse_mode:'HTML',reply_markup:r.kb});c.api.deleteMessage(c.chat.id,w.message_id).catch(()=>{})}catch(e){c.api.editMessageText(c.chat.id,w.message_id,ERR(e)).catch(()=>{})}});
- bot.callbackQuery(/^ch:(\w+):(.+)$/,async c=>{c.answerCallbackQuery('Loading '+c.match[1]+'…').catch(()=>{});try{const r=await chartMsg(c.match[2],c.match[1]);await c.editMessageMedia({type:'photo',media:new InputFile(r.png,'chart.png'),caption:r.cap,parse_mode:'HTML'},{reply_markup:r.kb})}catch(e){if(!/not modified/.test(e.message))c.reply(ERR(e))}});
- bot.callbackQuery(/^pc:(.+)$/,async c=>{c.answerCallbackQuery().catch(()=>{});try{const r=await coinCard(c.match[1],WHO(c));await c.replyWithPhoto(new InputFile(r.png,'pnl.png'),{caption:r.cap,parse_mode:'HTML'})}catch(e){c.reply(ERR(e))}});
- bot.command('pnl',async c=>{const q=c.match.trim();try{if(q){const r=await coinCard(q,WHO(c));return c.replyWithPhoto(new InputFile(r.png,'pnl.png'),{caption:r.cap,parse_mode:'HTML'})}
-  await c.reply(summary(),{parse_mode:'HTML'});const p=equityPng();if(p)await c.replyWithPhoto(new InputFile(p,'equity.png'),{caption:`Cumulative PnL · ${T.st.closed.length} closed trades (paper + live)`})}catch(e){c.reply(ERR(e))}});}
+ bot.command('c',async c=>{const w=await c.reply('📈 Drawing chart…');try{const r=await chartMsg(c.match);await c.replyWithPhoto(new InputFile(await r.png,'chart.png'),{caption:r.cap,parse_mode:'HTML',reply_markup:r.kb});c.api.deleteMessage(c.chat.id,w.message_id).catch(()=>{})}catch(e){c.api.editMessageText(c.chat.id,w.message_id,ERR(e)).catch(()=>{})}});
+ bot.callbackQuery(/^ch:(\w+):(.+)$/,async c=>{c.answerCallbackQuery('Loading '+c.match[1]+'…').catch(()=>{});try{const r=await chartMsg(c.match[2],c.match[1]);await c.editMessageMedia({type:'photo',media:new InputFile(await r.png,'chart.png'),caption:r.cap,parse_mode:'HTML'},{reply_markup:r.kb})}catch(e){if(!/not modified/.test(e.message))c.reply(ERR(e))}});
+ bot.callbackQuery(/^pc:(.+)$/,async c=>{c.answerCallbackQuery().catch(()=>{});try{const r=await coinCard(c.match[1],WHO(c));await c.replyWithPhoto(new InputFile(await r.png,'pnl.png'),{caption:r.cap,parse_mode:'HTML'})}catch(e){c.reply(ERR(e))}});
+ bot.command('pnl',async c=>{const q=c.match.trim();try{if(q){const r=await coinCard(q,WHO(c));return c.replyWithPhoto(new InputFile(await r.png,'pnl.png'),{caption:r.cap,parse_mode:'HTML'})}
+  await c.reply(summary(),{parse_mode:'HTML'});const p=await Promise.resolve(equityPng()).catch(e=>{console.log('equity png',e.message);return null});if(p)await c.replyWithPhoto(new InputFile(p,'equity.png'),{caption:`Cumulative PnL · ${T.st.closed.length} closed trades (paper + live)`})}catch(e){c.reply(ERR(e))}});}
 module.exports={install,chartMsg,summary,equityPng,coinCard,recordScan,renderCandles,candles,parseCoin};

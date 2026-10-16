@@ -16,5 +16,7 @@ function report(arg,now=Date.now()){const w=parseWin(arg);if(w===undefined)retur
  const r=compute(w?.ms,now);const head=w?`📊 PnL for coins bought in the last ${w.label}`:`📊 PnL since test start${r.since?' ('+new Date(r.since).toLocaleString('en-GB',{timeZone:'Africa/Lagos'})+' WAT)':''}`;
  if(!r.all.n)return head+'\nNo coins bought in this period.';
  return `${head}${T.st.open?.some(p=>p.paper)||T.st.closed?.some(p=>p.paper)?' [paper]':''}\n\n${line(r.all)}\n\n🎯 Regular snipe\n${line(r.snipe)}\n\n🐋 Big Play\n${line(r.big)}\n\n🌙 Moonbag${S.moon?'':' (off)'}\n${line(r.moon)}${r.moon.closed?'\nBest it reached: '+require('./fmt').px((best(r.since)-1)*100):''}`}
-function install(bot){bot.command(['gpnl','gnpl'],c=>c.reply(report(c.match)))}
-module.exports={install,report,compute,parseWin};
+function cardData(arg){const w=parseWin(arg);if(w===undefined)return null;const r=compute(w?.ms);if(!r.all.n)return null;
+ return {title:w?`PnL · last ${w.label}`:'PnL since test start',window:w?`last ${w.label}`:(r.since?'since '+new Date(r.since).toLocaleDateString('en-GB',{timeZone:'Africa/Lagos'}):'all time'),all:r.all,modes:[['Snipe',r.snipe],['Big Play',r.big],['Moonbag',r.moon]],paper:!!(T.st.open?.some(p=>p.paper)||T.st.closed?.some(p=>p.paper))}}
+function install(bot){bot.command(['gpnl','gnpl'],async c=>{const d=cardData(c.match),t=report(c.match);if(!d)return c.reply(t);return require('./pnlcard').sendWithCard(c,d,t)})}
+module.exports={install,report,compute,parseWin,cardData};
