@@ -16,7 +16,7 @@ function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.f
  const t5=p.txns?.m5||{},c=p.priceChange||{};if((t5.buys||0)<(t5.sells||0))R.push('5m sells > buys');if((c.m5||0)<-3||(c.h1||0)<-10)R.push('dumping');if((p.volume?.m5||0)<1000)R.push('5m vol < $1k');
  const v5=p.volume?.m5||0;if(v5<(v1/12)*S.bigMinVolAccel)R.push(`5m vol not rising (x${(v1?v5/(v1/12):0).toFixed(2)})`);if(v1<(v6/6)*S.bigMinVolAccel)R.push('1h vol not rising vs 6h');
  const r5=((t5.buys||0)+1)/((t5.sells||0)+1);if(r5<S.bigMinRatio)R.push(`buy/sell 5m ${r5.toFixed(2)}`);
- if((c.m5||0)<S.bigMinM5)R.push(`stalled 5m ${c.m5||0}%`);if((c.h24||0)>S.bigMaxH24)R.push(`already ran +${c.h24}% 24h`);if((c.h24||0)<-30||(c.h6||0)<-15)R.push('downtrend (dead-cat bounce)');
+ if((c.m5||0)<S.bigMinM5)R.push(`stalled 5m ${c.m5||0}%`);if(S.bigMaxH1>0&&(c.h1||0)>S.bigMaxH1)R.push(`already ran +${c.h1}% 1h`);if((c.h24||0)>S.bigMaxH24)R.push(`already ran +${c.h24}% 24h`);if((c.h24||0)<-30||(c.h6||0)<-15)R.push('downtrend (dead-cat bounce)');
  return R;}
 // Runner path: young coin already trending (1h/6h) with rising 5m volume and buyers in control. Skips the 24h cap and 1h-vs-6h checks that block every live runner.
 function runnerFilter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,c=p.priceChange||{},t1=p.txns?.h1||{},t5=p.txns?.m5||{},v1=p.volume?.h1||0,v5=p.volume?.m5||0;

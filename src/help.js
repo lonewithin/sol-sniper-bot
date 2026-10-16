@@ -51,7 +51,7 @@ Auto sweep runs at 23:55 WAT.
 /withdraw ADDRESS 0.1 or /withdraw ADDRESS all: send SOL out by hand
 In paper mode these only show what would happen.`],
 size:['📏 Trade size',`Every trade is <b>$5–$10</b>, worked out in SOL at the live price:
-Scalp / Fast / Second chance $5 · Swing $6.25 · Runner $8 · Big Play and Moonbag $10.
+Scalp / Fast / Second chance $5 · Swing $6.25 · Runner $8 · Big Play $5 · Moonbag $10.
 Change: /set buyUsdMin 5 and /set buyUsdMax 10 (/set usdSizing false = old SOL sizes).
 In hours that lost money before, size can be halved (/set todFilter).
 Limits: max coins open per strategy (/set maxOpen) and a pause after 3 losses in a row.`],
@@ -73,7 +73,7 @@ skills:['🧠 Skills',`<b>Skills</b> are extra checks. Each was backtested on re
 💧 <b>Volume-dry exit</b>: OFF, it lost money with Let it run.
 
 Not used for Moonbag or manual buys. /skills shows what each did. Switch in /set → Skills.`],
-big:['🐋 Big Play',`Buys older coins (1h+), market cap $100k–$10M, liquidity $50k+, more buyers than sellers, rising volume. /bigplay on|off. OFF by default (lost money in both halves of paper testing).
+big:['🐋 Big Play',`Buys older coins (1h+), market cap $100k–$10M, liquidity $50k+, more buyers than sellers, rising volume. /bigplay on|off. ON by default. Skips coins already up more than 200% in the last hour (biggest backtest gain). Trades at $5, the minimum size, because the edge is still thin.
 <b>Exits</b>: sells half at +50% (1.5x). The rest sells if it falls 40% from its peak or back to entry. Stop loss −25%.
 <b>Profit lock</b>: peaked +20% but never hit +50%? Sells when the gain falls back to +3%.
 <b>Hold</b>: 4h, extended 2h at a time while climbing, up to 24h. <b>Flat exit</b> after 50 min under +5%.
