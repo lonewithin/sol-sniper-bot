@@ -111,10 +111,22 @@ cmds:['📋 Commands',`<b>Trading</b>
 /set: menu · /set NAME VALUE (e.g. /set buyUsdMax 10)
 /settings: every value · /reset: defaults · /cancel: stop typing a value
 <b>Users</b> (owner)
-/users · /adduser ID · /removeuser ID. Others can only view results.`]};
+/users · /role ID watch|trade · /adduser ID [trade] · /removeuser ID (see 🤝 Friends)`],
+friends:['🤝 Friends',`<b>Friends (owner controls everything)</b>
+When someone new messages the bot you get buttons: 👀 <b>Watch</b> (view your results only) · 🤝 <b>Trade</b> (their own account) · ❌ Deny.
+/users: every user with buttons Watch / Trade / Live on-off / Remove, plus their results (closed trades, win rate, % and x).
+/role ID trade · /role @name watch: switch any time.
+
+<b>Trade friends get</b> their own burner wallet (encrypted in data/users/ID), their own settings (start at $5–$10, Let it run, skills), their own trades and PnL, max 3 open. Paper by default.
+They use the same commands (/auto /wallet /burners /newburner /export /profitaddress /withdraw /profit /set /settings /pnl /gpnl /stats /positions /sellall) and each one only ever touches THEIR wallet.
+<b>Live</b> needs both: they send /paper off CONFIRM, and you tap Live: on in /users.
+
+🔒 You cannot export friends' keys and they cannot see yours. You only see their results.
+Trade → Watch stops their auto-buys; open trades stay and the bot still closes them by the rules.
+Back up the whole data folder (it now has data/users) when moving phones.`]};
 const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]],i)=>{k.text((id===cur?'• ':'')+t,'help:'+id);if(i%2)k.row()});return k;};
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Full guide'],['auto','Auto-buy on|off'],['positions','Open trades'],['gpnl','Profit card (or 1h, 1d)'],['pnl','PnL summary · /pnl $TICKER'],['stats','Dashboard + card'],['skills','Trading skills + impact'],['strategy','Rules in use'],['check','Score a coin'],['c','Chart: /c $TICKER'],['snipe','Snipe on|off'],['bigplay','Big Play on|off'],['paper','on · off CONFIRM = live'],['wallet','Burner + balance'],['burners','List burners'],['newburner','New burner + switch'],['export','Back up key (CONFIRM)'],['profitaddress','Set profit wallet'],['profit','Profit menu'],['sweep','Send profit now'],['withdraw','Send SOL out'],['sellall','Sell everything'],['panic','Stop + sell all'],['set','Settings menu'],['settings','All values'],['reset','Settings to defaults'],['cancel','Stop typing a value'],['users','Approved users'],['adduser','Add read-only user'],['removeuser','Remove user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Full guide'],['auto','Auto-buy on|off'],['positions','Open trades'],['gpnl','Profit card (or 1h, 1d)'],['pnl','PnL summary · /pnl $TICKER'],['stats','Dashboard + card'],['skills','Trading skills + impact'],['strategy','Rules in use'],['check','Score a coin'],['c','Chart: /c $TICKER'],['snipe','Snipe on|off'],['bigplay','Big Play on|off'],['paper','on · off CONFIRM = live'],['wallet','Burner + balance'],['burners','List burners'],['newburner','New burner + switch'],['export','Back up key (CONFIRM)'],['profitaddress','Set profit wallet'],['profit','Profit menu'],['sweep','Send profit now'],['withdraw','Send SOL out'],['sellall','Sell everything'],['panic','Stop + sell all'],['set','Settings menu'],['settings','All values'],['reset','Settings to defaults'],['cancel','Stop typing a value'],['users','Friends + buttons'],['role','ID watch|trade'],['adduser','Add user (ID trade)'],['removeuser','Remove user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};

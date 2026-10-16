@@ -2,8 +2,10 @@
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {Keypair}=require('@solana/web3.js');const bs58=require('bs58').default||require('bs58');
 const {DATA}=require('./config');
-const VF=path.join(DATA,'vault.enc'),LEGACY=path.join(DATA,'wallet.enc'),PF=path.join(DATA,'wallet.pass');
-function pass(){if(process.env.WALLET_ENC_KEY)return process.env.WALLET_ENC_KEY;
+// createVault(dir): same AES-GCM scheme for any folder. Owner = data/ (unchanged files); friends = data/users/<id>/ with their own wallet.pass.
+function createVault(dir,{allowEnv=true}={}){fs.mkdirSync(dir,{recursive:true,mode:0o700});
+const VF=path.join(dir,'vault.enc'),LEGACY=path.join(dir,'wallet.enc'),PF=path.join(dir,'wallet.pass');
+function pass(){if(allowEnv&&process.env.WALLET_ENC_KEY)return process.env.WALLET_ENC_KEY;
  if(!fs.existsSync(PF))fs.writeFileSync(PF,crypto.randomBytes(32).toString('hex'),{mode:0o600});return fs.readFileSync(PF,'utf8').trim();}
 function enc(buf){const salt=crypto.randomBytes(16),iv=crypto.randomBytes(12),k=crypto.scryptSync(pass(),salt,32);
  const c=crypto.createCipheriv('aes-256-gcm',k,iv);const d=Buffer.concat([c.update(buf),c.final()]);
@@ -16,16 +18,17 @@ function persist(){fs.writeFileSync(VF,enc(Buffer.from(JSON.stringify(V))),{mode
 function vault(){if(V)return V;
  if(fs.existsSync(VF))V=JSON.parse(dec(fs.readFileSync(VF,'utf8')).toString());
  else{V={active:0,wallets:[]};
-  if(process.env.BURNER_PRIVATE_KEY)V.wallets.push({secret:process.env.BURNER_PRIVATE_KEY.trim(),created:Date.now(),trades:0,label:'env import'});
+  if(allowEnv&&process.env.BURNER_PRIVATE_KEY)V.wallets.push({secret:process.env.BURNER_PRIVATE_KEY.trim(),created:Date.now(),trades:0,label:'env import'});
   else if(fs.existsSync(LEGACY))V.wallets.push({secret:bs58.encode(dec(fs.readFileSync(LEGACY,'utf8'))),created:Date.now(),trades:0,label:'migrated'});
   else V.wallets.push({secret:bs58.encode(Keypair.generate().secretKey),created:Date.now(),trades:0,label:'generated'});persist();}
  return V;}
 const kpOf=w=>Keypair.fromSecretKey(bs58.decode(w.secret));
 let cache={};const kp=i=>{const w=vault().wallets[i];return cache[i]??=kpOf(w)};
-module.exports={
+return {
  load:()=>kp(vault().active),pub:()=>kp(vault().active).publicKey.toBase58(),source:()=>vault().wallets[vault().active].label,
  activeIndex:()=>vault().active,list:()=>vault().wallets.map((w,i)=>({i,pub:kp(i).publicKey.toBase58(),label:w.label,created:w.created,trades:w.trades||0,active:i===vault().active})),
  keypair:i=>kp(i),exportSecret:(i=vault().active)=>vault().wallets[i].secret,
  create(label='rotated'){vault().wallets.push({secret:bs58.encode(Keypair.generate().secretKey),created:Date.now(),trades:0,label});persist();return vault().wallets.length-1;},
  setActive(i){vault().active=i;persist();},countTrade(){const w=vault().wallets[vault().active];w.trades=(w.trades||0)+1;persist();return w.trades;},
- _reset(){V=null;cache={};}};
+ _reset(){V=null;cache={};}};}
+module.exports=createVault(DATA);module.exports.createVault=createVault;
