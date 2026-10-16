@@ -26,17 +26,17 @@ big:['🐋 Big Play',`Big Play buys older coins (at least 1 hour old) with marke
 It needs buyers to outnumber sellers and volume to be rising.
 
 <b>Size</b>: fixed 0.05 SOL per trade.
-<b>Exits</b>: sells half at +50%. The rest rides a 25% trailing stop. Stop loss −25%.
+<b>Exits</b>: sells half at +50%. The other half is the runner: it sells only if it falls 40% from its peak (so a 20x keeps most of the run) or drops back to entry. Stop loss −25%.
 <b>Modest-peak profit lock</b>: if it peaks 20%+ but never reaches the half-sell, it sells when the gain falls back to +3% (so a +22% blip does not trail into a loss). Real runners that hit +50% keep the trail.
 <b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
 <b>Flat exit</b>: sells after 50 min if it never got above +5%.`],
 moon:['🌙 Moonbag',`<b>🌙 Moonbag</b> is a third strategy, separate from Snipe and Big Play. It hunts coins that could run 10–100x.
 
-<b>Buys</b> fresh coins that are busy (300+ buys, $20k+ 5m volume), buyer-led (buys÷sells 1.2+), with volume speeding up (2×+), $15k+ liquidity, safety 70+, not already spiking (5m between −15% and +120%).
-<b>Size</b>: 0.05 SOL, up to 3 at once.
+<b>Buys</b> fresh coins that are busy (150+ buys, $10k+ 5m volume), buyer-led (buys÷sells 1.1+), with volume speeding up (1.5×+), $10k+ liquidity, safety 70+, not already spiking (5m between −15% and +120%).
+<b>Size</b>: 0.05 SOL. Up to 3 Moonbag coins at once (Snipe and Big Play each have their own 3).
 <b>Before 2x</b>: hard stop loss −30%.
-<b>At 2x</b>: sells 80% to lock profit.
-<b>The last 20%</b> (the moonbag) rides until it falls 45% from its peak, or 24h.
+<b>Ladder</b>: sells 50% at 2x, another 25% at 5x, another 15% at 10x.
+<b>The last 10%</b> (the moonbag) rides until it falls 45% from its peak, or 24h.
 
 Every trade records the best multiple the coin reached. See /pnl and /gpnl. Change any rule in /set → Moonbag. Paper only.`],
 runner:['🏃 Runner path',`A Big Play entry for young coins already trending.

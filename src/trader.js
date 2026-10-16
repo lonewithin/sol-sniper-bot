@@ -15,7 +15,7 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
 const UNL=()=>S.paper===true&&S.paperUnlimited===true;
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  sol=+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(!UNL()&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(!UNL()&&st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
+ if(!UNL()&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -35,7 +35,7 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
  if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
  if(!UNL()&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
- if(!UNL()&&st.open.filter(p=>grp(p)===g).length>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
+ if(st.open.filter(p=>grp(p)===g).length>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
  const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=+(spent+sol).toFixed(6);
  const decimals=await dec(tok.mint);const entry=sol/(Number(q.outAmount)/10**decimals);
@@ -49,11 +49,11 @@ async function sell(p,why,frac=1){const amt=frac>=1?p.tokens:String(BigInt(p.tok
  if(p.paper&&sol>0)sol=Math.max(0,sol*(1-S.paperCostPct/100/(frac>=1?1:1))-S.priorityLamports/LAMPORTS_PER_SOL);
  const exit=sol/(Number(amt)/10**(p.decimals??6));
  if(frac<1){p.tokens=String(BigInt(p.tokens)-BigInt(amt));p.realized+=sol;p.partial=true;save();
-  notify(`<b>${label(p)}</b>\n🟡 PARTIAL SELL ${Math.round(frac*100)}% ${p.symbol}${p.paper?' [paper]':''}\n📝 ${why}\nSOL out: ${sol.toFixed(5)} · Exit ${fp(exit)}`);return null;}
+  notify(`<b>${label(p)}</b>\n🟡 PARTIAL SELL ${Math.round(frac*100)}% ${p.symbol}${p.paper?' [paper]':''}\n📝 ${why}\nSOL out: ${sol.toFixed(5)} · Exit ${fp(exit)} · ${require('./fmt').px(p.entry?(exit/p.entry-1)*100:0)} on the part sold`);return null;}
  const out=sol+p.realized;st.open=st.open.filter(x=>x!==p);
  const c={...p,solOut:out,exit,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why,closed:Date.now(),holdMin:+((Date.now()-p.opened)/6e4).toFixed(1),sellSig:sig};st.closed.push(c);save();streak(c);try{require('./bigab').record(c)}catch(e){console.log('bigab',e.message)}
  L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,ver:c.ver||'v3',solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why,holdMin:c.holdMin,paper:c.paper,opened:c.opened,closed:c.closed,peakPct:+(c.peak||0).toFixed(1),maxX:+(1+(c.peak||0)/100).toFixed(2),...(c.gapMin?{gapMin:c.gapMin}:{})});
- notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol}${c.paper?' [paper]':''}\n📝 ${why}\nSOL in: ${c.solIn} → out: ${out.toFixed(5)} · held ${c.holdMin}m\nEntry: ${fp(c.entry||0)} → Exit: ${fp(exit)} SOL/token\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct>=0?'+':''}${c.pnlPct.toFixed(1)}%)\nBest it reached: ${(1+(c.peak||0)/100).toFixed(2)}x${c.paper?'':'\ntx: '+sig}`);return c;}
+ notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol}${c.paper?' [paper]':''}\n📝 ${why}\nSOL in: ${c.solIn} → out: ${out.toFixed(5)} · held ${c.holdMin}m\nEntry: ${fp(c.entry||0)} → Exit: ${fp(exit)} SOL/token\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${require('./fmt').px(c.pnlPct)})\nBest it reached: ${require('./fmt').px(c.peak||0)}${c.paper?'':'\ntx: '+sig}`);return c;}
 let pauseUntil=0,losses=0;function streak(c){if(c.tier==='BIG'||c.tier==='MOON')return;if(c.pnl>0){losses=0;return}if(++losses>=S.lossStreakN&&S.lossStreakN>0&&!UNL()){losses=0;pauseUntil=Date.now()+S.lossPauseMin*6e4;notify(`⏸ ${S.lossStreakN} losses in a row: snipe + second chance buys paused ${S.lossPauseMin} min [${S.paper?'paper':'LIVE'}]`)}}
 const paused=()=>Date.now()<pauseUntil;
 // Box/phone sleep guard: if the monitor loop was frozen (device asleep, clock jump), don't count that gap toward hold/time limits.
@@ -65,11 +65,13 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   p.last=sol;const ch=((sol+p.realized)/(p.solIn)-1)*100;const curCh=(sol/(p.solIn*rest)-1)*100;if(pairs[p.mint]?.priceUsd)p.entryUsd=p.entryUsd||+pairs[p.mint].priceUsd/(1+curCh/100);
   p.peak=Math.max(p.peak||0,curCh);const age=(Date.now()-p.opened)/6e4;
   const m=potential(pairs[p.mint],{safety:p.safety||S.minScore,mint:p.mint});p.potNow=m.potential;let why=null;
-  const f1=x=>(x>=0?'+':'')+x.toFixed(1)+'%';const armRule=['SECOND','RUNNER','BIG'].includes(p.tier);const trail=r.trail||S.trailingPct;
+  const f1=x=>require('./fmt').px(x);const armRule=['SECOND','RUNNER','BIG'].includes(p.tier);const trail=r.trail||S.trailingPct;
   const armed=!armRule||p.peak>=S.trailArmPct||age>=S.trailGraceMin;
   if(p.tier==='MOON'){p.maxX=+(1+p.peak/100).toFixed(2);
    if(!p.halfDone&&curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry before 2x (limit −${r.sl}%). Total ${f1(ch)}`;
-   else if(!p.halfDone&&curCh>=S.moonLockAt){p.halfDone=true;await sell(p,`🌙 Moonbag lock: sold ${S.moonSellPct}% at ${f1(curCh)} (target +${S.moonLockAt}%). The other ${100-S.moonSellPct}% rides with a ${r.trail}% trailing stop from the peak`,S.moonSellPct/100);continue;}
+   else if(!p.halfDone&&curCh>=S.moonLockAt){p.halfDone=true;p.moonSold=S.moonSellPct;await sell(p,`🌙 Moonbag lock: sold ${S.moonSellPct}% at ${f1(curCh)} (target +${S.moonLockAt}%). The other ${100-S.moonSellPct}% rides with a ${r.trail}% trailing stop from the peak`,S.moonSellPct/100);continue;}
+   else if(p.halfDone&&!p.tp2&&S.moonTp2Pct>0&&curCh>=S.moonTp2At){p.tp2=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp2Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp2At}%)`,pc/left);continue;}
+   else if(p.halfDone&&!p.tp3&&S.moonTp3Pct>0&&curCh>=S.moonTp3At){p.tp3=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp3Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp3At}%)`,pc/left);continue;}
    else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-r.trail/100))why=`🌙 Moonbag trail: fell ${r.trail}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
    else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
    if(why)await sell(p,why);p.fails=0;continue;}
@@ -78,9 +80,10 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   else if(p.tier==='RUNNER'&&S.runnerLockAt>0&&p.peak>=S.runnerLockAt&&curCh<=S.runnerLockPct)why=`Profit lock: peaked +${p.peak.toFixed(0)}% then fell back to ${f1(curCh)}, selling before it turns into a loss. Total ${f1(ch)}`;
   else if(p.tier==='BIG'&&S.bigLockAt>0&&p.peak>=S.bigLockAt&&p.peak<(S.bigPartialAt||50)&&!p.halfDone&&curCh<=S.bigLockPct)why=`Profit lock: peaked +${p.peak.toFixed(0)}% (under half-sell) then fell back to ${f1(curCh)}, selling before it turns into a loss. Total ${f1(ch)}`;
   else if(r.earlyAt&&!p.early&&!p.halfDone&&(!r.tp||r.tp>r.earlyAt)&&curCh>=r.earlyAt){p.early=true;await sell(p,`Early take-profit: sold ${Math.round(r.earlyFrac*100)}% at ${f1(curCh)} (target +${r.earlyAt}%). Stop on the rest moved to breakeven`,r.earlyFrac);continue;}
-  else if(r.partialAt&&!p.halfDone&&curCh>=r.partialAt){p.halfDone=true;await sell(p,`Partial take-profit: sold half at ${f1(curCh)} (target +${r.partialAt}%). Stop moved to breakeven; the rest rides with a ${trail}% trailing stop`,0.5);continue;}
+  else if(r.partialAt&&!p.halfDone&&curCh>=r.partialAt){p.halfDone=true;await sell(p,`Partial take-profit: sold half at ${f1(curCh)} (target +${r.partialAt}%). Stop moved to breakeven; the rest rides with a ${p.tier==='BIG'&&S.bigRestTrailPct>0?S.bigRestTrailPct+'% (of peak) runner':trail+'%'} trailing stop`,0.5);continue;}
   else if(r.tp&&curCh>=r.tp)why=`Take profit: hit ${f1(curCh)} (target +${r.tp}%)`;
-  else if(trail&&armed&&p.peak>=10&&curCh<=p.peak-trail)why=`Trailing stop: fell ${(p.peak-curCh).toFixed(0)}% from its +${p.peak.toFixed(0)}% peak, locked ${f1(ch)}`;
+  else if(p.tier==='BIG'&&p.halfDone&&S.bigRestTrailPct>0&&(1+curCh/100)<=(1+p.peak/100)*(1-S.bigRestTrailPct/100))why=`Runner trail: the half left after the +${r.partialAt}% sell fell ${S.bigRestTrailPct}% from its ${f1(p.peak)} peak, locked ${f1(ch)}`;
+  else if(trail&&armed&&p.peak>=10&&curCh<=p.peak-trail&&!(p.tier==='BIG'&&p.halfDone&&S.bigRestTrailPct>0))why=`Trailing stop: fell ${(p.peak-curCh).toFixed(0)}% from its +${p.peak.toFixed(0)}% peak, locked ${f1(ch)}`;
   else if(p.tier==='BIG'&&S.bigFlatMin>0&&!p.halfDone&&age>=S.bigFlatMin&&p.peak<S.bigFlatPct)why=`Time stop: flat for ${age.toFixed(0)} min (never reached +${S.bigFlatPct}%), freeing the budget. Total ${f1(ch)}`;
   else if(p.tier==='BIG'&&S.bigFlatMin>0&&!p.halfDone&&age>=S.bigFlatMin&&p.peak>=S.bigFlatPct&&p.peak<(S.bigPartialAt||50)&&curCh<S.bigGaveBackPct)why=`Gave back early gain: peaked +${p.peak.toFixed(0)}% then sat at ${f1(curCh)} after ${age.toFixed(0)} min. Freeing the budget.`;
   else if(p.tier==='BIG'&&age>=(p.holdLim||r.maxMin)){const lim=p.holdLim||r.maxMin,next=lim+S.bigExtendH*60,pc=pairs[p.mint]?.priceChange||{};const mom=(pc.h1??0)>0&&(pc.m5??0)>=0;
@@ -90,7 +93,7 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   else if(p.tier!=='BIG'&&age>=1&&m.potential<S.momentumExit&&pairs[p.mint])why=`Momentum faded: potential dropped to ${m.potential} (exit below ${S.momentumExit}), closed at ${f1(ch)}`;
   if(why)await sell(p,why);p.fails=0;}catch(e){p.fails=(p.fails||0)+1;const age=(Date.now()-p.opened)/6e4,r=p.rules||rules('SWING');
   // Paper: force-close when quotes stay dead (was non-BIG only — Macca BIG sat 4h then exited -41% past the -25% SL)
-  if(p.paper&&age>=(p.tier==='BIG'||p.tier==='MOON'?Math.max(30,(r.maxMin||240)*0.25):r.maxMin+5)&&p.fails>=(p.tier==='BIG'||p.tier==='MOON'?12:6)){st.open=st.open.filter(x=>x!==p);const out=(p.last||0)+p.realized;const c={...p,solOut:out,exit:0,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why:'No sell quote (no route): closed at last known value',closed:Date.now(),holdMin:+age.toFixed(1),sellSig:'PAPER'};st.closed.push(c);L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why:c.why,holdMin:c.holdMin,paper:true,opened:c.opened,closed:c.closed});notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} [paper]\n📝 ${c.why}\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${c.pnlPct.toFixed(1)}%) · held ${c.holdMin}m`)}
+  if(p.paper&&age>=(p.tier==='BIG'||p.tier==='MOON'?Math.max(30,(r.maxMin||240)*0.25):r.maxMin+5)&&p.fails>=(p.tier==='BIG'||p.tier==='MOON'?12:6)){st.open=st.open.filter(x=>x!==p);const out=(p.last||0)+p.realized;const c={...p,solOut:out,exit:0,pnl:out-p.solIn,pnlPct:(out/p.solIn-1)*100,why:'No sell quote (no route): closed at last known value',closed:Date.now(),holdMin:+age.toFixed(1),sellSig:'PAPER'};st.closed.push(c);L.trade({mint:c.mint,symbol:c.symbol,tier:c.tier,pot:c.pot,safety:c.safety,features:c.features,solIn:c.solIn,solOut:out,pnl:c.pnl,pnlPct:+c.pnlPct.toFixed(2),why:c.why,holdMin:c.holdMin,paper:true,opened:c.opened,closed:c.closed});notify(`<b>${label(c)}</b>\n${c.pnl>=0?'✅ WIN':'🔻 LOSS'} SELL ${c.symbol} [paper]\n📝 ${c.why}\nPnL: ${c.pnl>=0?'+':''}${c.pnl.toFixed(5)} SOL (${require('./fmt').px(c.pnlPct)}) · held ${c.holdMin}m`)}
   else if(p.fails===1||p.fails%12===0)console.log(`[monitor] ${p.symbol} err (${p.fails}x): ${e.message}`)}}save();}
 const balance=async()=>UNL()?1e9:(await conn.getBalance(W.load().publicKey))/LAMPORTS_PER_SOL;
 const stats=()=>{const c=st.closed,w=c.filter(x=>x.pnl>0).length,i=c.reduce((a,x)=>a+x.solIn,0),o=c.reduce((a,x)=>a+x.solOut,0);return {n:c.length,wins:w,losses:c.length-w,winRate:c.length?w/c.length*100:0,solIn:i,solOut:o,pnl:o-i,pnlPct:i?(o/i-1)*100:0}};

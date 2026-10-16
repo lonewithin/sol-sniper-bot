@@ -7,7 +7,7 @@ function recordScan(o){if(!o.mint||scans[o.mint])return;scans[o.mint]={t:Date.no
  const k=Object.keys(scans);if(k.length>20000)for(const x of k.slice(0,5000))delete scans[x];try{fs.writeFileSync(SCANF,JSON.stringify(scans))}catch{}}
 const usd=n=>n==null||isNaN(n)?'-':n>=1e9?`$${(n/1e9).toFixed(2)}B`:n>=1e6?`$${(n/1e6).toFixed(2)}M`:n>=1e3?`$${(n/1e3).toFixed(1)}k`:`$${(+n).toFixed(0)}`;
 const price=p=>{p=+p;return !p?'-':p<0.0001?'$'+p.toExponential(3):'$'+p.toPrecision(4)};
-const pct=x=>x==null||isNaN(x)?'-':`${x>=0?'+':''}${(+x).toFixed(1)}%`;const sol=x=>`${x>=0?'+':''}${x.toFixed(4)} SOL`;
+const pct=x=>x==null||isNaN(x)?'-':require('./fmt').px(+x);const sol=x=>`${x>=0?'+':''}${x.toFixed(4)} SOL`;
 const dur=ms=>{const m=ms/6e4;return m<60?`${m|0}m`:m<2880?`${(m/60).toFixed(1)}h`:`${(m/1440)|0}d`};
 const lagos=t=>new Date(t).toLocaleString('en-GB',{timeZone:'Africa/Lagos',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+' WAT';
 const TF={'5m':['minute',5],'15m':['minute',15],'1h':['hour',1],'4h':['hour',4]};

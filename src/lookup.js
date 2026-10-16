@@ -15,7 +15,7 @@ async function card(mint){const pr=(await pairsFor([mint]))[mint];const d=await 
  const m=potential(pr,{safety:d?.score||0,holders:d?.holders,mint});const s=d||{reasons:[],hard:[]};
  const tx=k=>pr?.txns?.[k]?`${pr.txns[k].buys}/${pr.txns[k].sells}`:'-';
  const pos=T.st.open.find(p=>p.mint===mint);let held='❌ Not holding';
- if(pos){const v=pos.last??pos.solIn;const ch=((v+(pos.realized||0))/pos.solIn-1)*100;held=`✅ Holding · ${T.label(pos)}\n${pos.solIn} SOL → ${v.toFixed(4)} (${ch>=0?'+':''}${ch.toFixed(1)}%)${pos.paper?' [paper]':''}`}
+ if(pos){const v=pos.last??pos.solIn;const ch=((v+(pos.realized||0))/pos.solIn-1)*100;held=`✅ Holding · ${T.label(pos)}\n${pos.solIn} SOL → ${v.toFixed(4)} (${require("./fmt").px(ch)})${pos.paper?' [paper]':''}`}
  const hard=s.reasons.filter(r=>r.startsWith('⛔')),soft=s.reasons.filter(r=>r.startsWith('⚠️')),good=s.reasons.filter(r=>r.startsWith('✅'));
  const name=pr?.baseToken?.name||d?.name||'?',sym=pr?.baseToken?.symbol||d?.symbol||'?';
  const t=`🪙 <b>${name}</b> ($${sym})
