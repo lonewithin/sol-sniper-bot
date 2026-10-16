@@ -1,199 +1,259 @@
-# Running the sniper bot on Android with PROM Terminal
+# Run the sniper bot on your phone (PROM Terminal)
 
-This guide uses your own app, **PROM Terminal** (github.com/lonewithin/prom-termux). It works like Termux and adds a `prom-setup` command.
-It contains **no secrets**. Never commit or share `.env`, keys, `vault.enc`, `wallet.pass` or the `data/` folder.
-Keep **PAPER=true**.
-
-> ⚠️ **Only one copy of the bot may run per bot token.** The bot is currently running on the PROM box (the cloud machine). Stop that copy *before* starting it on the phone, or both will fight and show `409 Conflict` (see Troubleshooting).
+Do one step at a time.
+Type exactly what is in the box, then press Enter.
+Never share your bot token or your .env file with anyone.
+The bot stays in **paper mode** (fake money).
 
 ---
 
-## 1. Back up and remove official Termux
-PROM Terminal uses the same package name (`com.termux`), so it can't be installed next to official Termux.
+## Step 1. Save your old Termux files (only if you had Termux before)
 
-In official Termux, if you have anything to keep:
-```sh
-termux-setup-storage
-tar -czf /sdcard/termux-home-backup.tgz -C ~ .
+Type this:
 ```
-Then uninstall: Android Settings → Apps → Termux → **Uninstall**. Also uninstall Termux:API, Termux:Boot and similar add-ons from the old source, because their signatures won't match.
+tar -czf /sdcard/termux-backup.tgz -C ~ .
+```
+You should see: nothing. It just goes back to a new line.
 
-## 2. Install PROM Terminal
-Install the PROM Terminal APK from your prom-termux build (GitHub Actions artifacts or Releases). Open it once and let it finish setting up.
+If it says `Permission denied` or `No such file`, type this, tap **Allow**, then do Step 1 again:
+```
+termux-setup-storage
+```
 
-## 3. Run prom-setup
-```sh
+Now delete the old Termux app:
+Phone **Settings → Apps → Termux → Uninstall**.
+Delete any **Termux:API** or **Termux:Boot** apps the same way.
+
+---
+
+## Step 2. Install PROM Terminal
+
+Install the PROM Terminal app file (APK). Open it and wait until you see a `$` sign.
+
+If it says **App not installed**, the old Termux is still on the phone. Uninstall it (Step 1), then try again.
+
+---
+
+## Step 3. Install the tools
+
+Type this:
+```
 prom-setup
 ```
-- Answer **Y** to install git, nodejs, python and openssh.
-- Answer **y** to clone `sol-sniper-bot` into `~/sol-sniper-bot`. The repo is private, so for the password use a **GitHub fine-grained token** with read-only access to this one repo (see Troubleshooting → git auth).
-- prom-setup **never starts trading**. It only installs tools and clones the repo.
+You should see: `Continue? [Y/n]`. Type `Y` and press Enter.
+Wait. It takes a few minutes.
+Then you see: `Clone lonewithin/sol-sniper-bot ...? [y/N]`. Type `y` and press Enter.
 
-Then:
-```sh
+It asks for `Username`. Type: `lonewithin`
+It asks for `Password`. Paste your **GitHub token** (not your GitHub password). You won't see it as you paste. That's normal.
+
+You should see: `Done.`
+
+If it says `command not found: prom-setup`, type this:
+```
+pkg update -y && pkg install -y git nodejs python openssh
+```
+
+If it says `Authentication failed` or `Invalid username or password`:
+your token is wrong or expired. Make a new one on GitHub:
+**Settings → Developer settings → Fine-grained tokens → Generate**. Pick repo **sol-sniper-bot**, then **Contents: Read-only**. Then type this:
+```
+git clone https://github.com/lonewithin/sol-sniper-bot ~/sol-sniper-bot
+```
+
+If it says `Permission denied (publickey)`, you used an SSH link. Use the https link above instead.
+
+If it says `already exists, skipping`, that's fine. Go to Step 4.
+
+---
+
+## Step 4. Go into the bot folder
+
+Type this:
+```
 cd ~/sol-sniper-bot
+```
+You should see: the line now shows `sol-sniper-bot`.
+
+If it says `No such file or directory`, the download didn't work. Do Step 3 again.
+
+---
+
+## Step 5. Install what the bot needs
+
+Type this:
+```
 npm install --omit=dev
 ```
+You should see: `added ... packages` at the end.
 
-## 4. Create `.env` (never committed)
-```sh
-cd ~/sol-sniper-bot
+If it says `command not found: node` or `command not found: npm`, type this:
+```
+pkg install -y nodejs
+```
+
+If it says `npm ERR! gyp` or `node-gyp`, type this, then do Step 5 again:
+```
+pkg install -y python make clang binutils pkg-config
+```
+
+If it says `ETIMEDOUT` or `network`, your internet dropped. Turn Wi-Fi or data off and on, then do Step 5 again.
+
+---
+
+## Step 6. Put in your bot details
+
+Type this:
+```
 nano .env
 ```
-Type your own values:
+You should see: an empty white page.
+
+Type these 4 lines with **your own** token and id:
 ```
-BOT_TOKEN=your_telegram_bot_token
-OWNER_ID=your_numeric_telegram_id
+BOT_TOKEN=paste_your_bot_token_here
+OWNER_ID=your_number_id_here
 PAPER=true
 RPC_URL=https://api.mainnet-beta.solana.com
 ```
-```sh
+Save: press **Ctrl + O**, then **Enter**, then **Ctrl + X**.
+(Ctrl is on the extra keys row above the keyboard.)
+
+Your bot token is in **@BotFather**. Your number id is in **@userinfobot**.
+
+Then type this:
+```
 chmod 600 .env
 ```
-`.env` is in `.gitignore`, so `git add` won't pick it up.
+You should see: nothing. That's good.
 
-## 5. Restore the data folder (optional, keeps history and the burner)
-If you have a backup of `data/` (trades, settings, users, encrypted burner), copy it into `~/sol-sniper-bot/data/`:
-```sh
-termux-setup-storage
-mkdir -p ~/sol-sniper-bot/data
-tar -xzf /sdcard/Download/sniper-data-backup.tgz -C ~/sol-sniper-bot/data
-chmod 700 ~/sol-sniper-bot/data
+---
+
+## Step 7. Stop the bot on the computer first ⚠️
+
+Send this to Grok Bot in chat:
+**"Stop the sniper bot on the computer, I'm starting it on my phone."**
+
+Wait until Grok Bot says it's stopped.
+If both run at the same time, the bot breaks (`409 Conflict`).
+
+---
+
+## Step 8. Keep the phone awake
+
+Type this:
 ```
-Without a backup, the bot starts fresh with a new paper burner.
-
-## 6. Stop the box copy, then start on the phone
-1. Ask PROM/Grok Bot to **stop the bot on the box** and wait until it confirms.
-2. On the phone:
-```sh
-cd ~/sol-sniper-bot
 termux-wake-lock
-chmod +x run.sh
-nohup ./run.sh > sniper.log 2>&1 &
-echo $! > run.pid
-tail -f sniper.log          # Ctrl+C stops watching, not the bot
 ```
-Check that exactly one copy is running:
-```sh
+You should see: nothing, or a note in your notification bar.
+
+Also do this once:
+Phone **Settings → Apps → PROM Terminal → Battery → Unrestricted**.
+On Xiaomi, Tecno, Infinix, Samsung or Oppo, also turn on **Autostart**.
+
+---
+
+## Step 9. Start the bot
+
+Type this:
+```
+nohup ./run.sh > sniper.log 2>&1 &
+```
+You should see: something like `[1] 12345`.
+
+If it says `Permission denied`, type this, then do Step 9 again:
+```
+chmod +x run.sh
+```
+
+---
+
+## Step 10. Check it's working
+
+Type this:
+```
+tail -n 20 sniper.log
+```
+You should see: `mode: PAPER | auto: true`, and lines like `[BIG] scan:`.
+Now send **/help** to your bot in Telegram. It should answer.
+
+If it says `Set BOT_TOKEN and OWNER_ID in .env` or `No such file .env`, do Step 6 again. Make sure you're in the bot folder (Step 4).
+
+If it says `401 Unauthorized` or `404 Not Found`, your bot token is wrong. Copy it again from @BotFather and do Step 6 again.
+
+If it says `409 Conflict`, the bot is also running somewhere else. Do Step 7, then type this:
+```
+pkill -f run.sh; pkill -f "node src/index.js"
+```
+Then do Step 9 again.
+
+If it says `429` or `ETIMEDOUT`, the internet or the free price server is busy. Wait 5 minutes. The bot tries again by itself.
+
+**If the bot doesn't reply in Telegram:**
+- Check that OWNER_ID is your **number**, not your @name.
+- Type this to see if it's running:
+```
 pgrep -af "node src/index.js"
 ```
-
-## 7. Stop it
-```sh
-cd ~/sol-sniper-bot
-kill $(cat run.pid) 2>/dev/null; pkill -f "node src/index.js"
-termux-wake-unlock
-```
-
-## 8. Keep it alive (battery)
-- Android Settings → Apps → **PROM Terminal** → Battery → **Unrestricted** / "Don't optimise".
-- On Xiaomi, Samsung, Oppo, Vivo or Tecno/Infinix phones, also turn on **Autostart**, allow background activity, and lock the app in the recent-apps screen (padlock icon).
-- Keep the PROM Terminal notification. Pulling it down and tapping **Acquire wakelock** does the same as `termux-wake-lock`.
-
-## 9. Update to the latest version
-```sh
-cd ~/sol-sniper-bot
-git pull
-npm install --omit=dev
-kill $(cat run.pid) 2>/dev/null; pkill -f "node src/index.js"; sleep 2
-nohup ./run.sh > sniper.log 2>&1 & echo $! > run.pid
-```
-
-## Users
-Adding people is done **inside the bot**, so no PROM Terminal or `.env` work is needed.
-When someone new messages the bot, you get **Accept / Deny** buttons. You can also use `/users`, `/adduser ID` and `/removeuser ID`.
-Approved users can only *view* (/help /gpnl /pnl /stats /positions /strategy /check /c). Only you (OWNER_ID) can change settings, wallets, export or trade. The list is saved in `data/users.json`.
+You should see: one line. If you see nothing, do Step 9 again.
+If you see two lines, type the `pkill` line above, then do Step 9 again.
 
 ---
 
-## Troubleshooting
+## Stop the bot
 
-### The bot doesn't reply
-```sh
-cd ~/sol-sniper-bot
-pgrep -af "run.sh|node src/index.js"     # is it running? should be one of each
-tail -n 50 sniper.log                    # last errors
+Type this:
 ```
-- **Nothing running:** start it again (step 6).
-- **`409 Conflict: terminated by other getUpdates request`:** two copies are running with the same token, probably the box *and* the phone, or two copies on the phone. Stop the box copy (ask Grok Bot), then on the phone:
-  ```sh
-  pkill -f run.sh; pkill -f "node src/index.js"; sleep 3
-  nohup ./run.sh > sniper.log 2>&1 & echo $! > run.pid
-  ```
-- **`Set BOT_TOKEN and OWNER_ID in .env`:** `.env` is missing or misnamed. Check with `ls -la .env`, and show the variable names only, never the values: `cut -d= -f1 .env`
-- **`401 Unauthorized` / `404 Not Found` from Telegram:** the bot token is wrong or was revoked. Get it again from @BotFather and fix `.env`.
-- **The bot ignores you:** OWNER_ID must be *your* numeric id (ask @userinfobot), not your @username.
-
-### npm install errors
-```sh
-pkg update && pkg upgrade -y
-pkg install -y nodejs python make clang binutils pkg-config
-cd ~/sol-sniper-bot && rm -rf node_modules && npm cache clean --force && npm install --omit=dev
+pkill -f run.sh; pkill -f "node src/index.js"
 ```
-- `gyp ERR!` or `node-gyp`: the build tools are missing; the line above installs them.
-- `EACCES` / `permission denied`: don't use `sudo` (it doesn't exist here). Run `chmod -R u+rw ~/sol-sniper-bot`
-- Out of space: `pkg clean && npm cache clean --force`
+You should see: nothing. The bot is now off.
 
-### git auth failures
-- GitHub doesn't accept account passwords. Make a **fine-grained token**: GitHub → Settings → Developer settings → Fine-grained tokens. Allow repository `sol-sniper-bot`, with **Contents: Read-only**.
-- Clone again and paste the token when git asks for the password:
-  ```sh
-  git clone https://github.com/lonewithin/sol-sniper-bot ~/sol-sniper-bot
-  ```
-- Don't put the token in the URL or in any file. To skip retyping on `git pull`, use SSH instead:
-  ```sh
-  ssh-keygen -t ed25519 -C phone && cat ~/.ssh/id_ed25519.pub   # add as a read-only Deploy key on the repo
-  git -C ~/sol-sniper-bot remote set-url origin git@github.com:lonewithin/sol-sniper-bot.git
-  ```
+---
 
-### Battery or Android keeps killing it
-- Run `termux-wake-lock` every time you start it.
-- Set battery to **Unrestricted** and turn on Autostart (step 8).
-- Don't swipe PROM Terminal away from recent apps.
-- If it still dies, run it on a VPS (below).
+## Update the bot to the newest version
 
-### Network or RPC 429 errors
-- `429 Too Many Requests` in the log is the public Solana RPC or DexScreener limiting you. The bot retries by itself.
-- If it happens constantly, put a free RPC key (Helius, QuickNode, etc.) in `.env` as `RPC_URL=...`. Keep that URL secret.
-- Mobile data or flaky Wi-Fi: check `ping -c 3 api.telegram.org`
-
-### Permission errors
-```sh
-chmod +x ~/sol-sniper-bot/run.sh
-chmod 600 ~/sol-sniper-bot/.env
-chmod 700 ~/sol-sniper-bot/data
-termux-setup-storage      # needed only to read backups in /sdcard
+Type this:
 ```
-
-### Wrong clock
-Times and daily stats depend on the phone clock. Turn on Settings → Date and time → **Automatic**. Check with:
-```sh
-date
+cd ~/sol-sniper-bot && git pull
 ```
-The bot reports in WAT (UTC+1).
+You should see: `Updating ...` or `Already up to date.`
 
-### Restore or back up the data folder
-Back up:
-```sh
+If it says `Authentication failed`, paste your GitHub token again (see Step 3).
+
+Then type this:
+```
+npm install --omit=dev
+```
+Then stop the bot (see above), and start it again (Step 9).
+
+---
+
+## Add people to the bot
+
+You don't need the phone terminal for this. It's all done in Telegram.
+- When someone new messages your bot, you get **Accept** and **Deny** buttons.
+- `/users` shows who has access.
+- `/adduser 123456789` adds someone by their number id.
+- `/removeuser 123456789` removes them.
+
+Added people can only look (/help /gpnl /pnl /stats /positions /strategy /check /c).
+Only you can change settings, wallets or trades.
+
+---
+
+## Other problems
+
+**The bot stops when the screen is off:** do Step 8 again. Don't swipe PROM Terminal away from recent apps.
+
+**Times look wrong:** turn on Phone **Settings → Date & time → Automatic**.
+
+**Back up your bot data** (trades, users, wallet):
+```
 tar -czf /sdcard/Download/sniper-data-backup.tgz -C ~/sol-sniper-bot/data .
 ```
-Restore (stop the bot first):
-```sh
-pkill -f run.sh; pkill -f "node src/index.js"
+
+**Put the backup back** (stop the bot first):
+```
 tar -xzf /sdcard/Download/sniper-data-backup.tgz -C ~/sol-sniper-bot/data
 ```
-The backup contains the encrypted burner. Keep it private and never upload it to GitHub or Drive.
-
----
-
-## VPS alternative (24/7, no battery issues)
-A small Ubuntu VPS (1 vCPU, 1 GB):
-```sh
-sudo apt update && sudo apt install -y git curl build-essential python3
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
-git clone https://github.com/lonewithin/sol-sniper-bot.git && cd sol-sniper-bot && npm install --omit=dev
-nano .env && chmod 600 .env          # same variables as step 4, PAPER=true
-sudo npm i -g pm2 && pm2 start ./run.sh --name sniper && pm2 save && pm2 startup
-pm2 logs sniper
-```
-The one-copy rule still applies: stop the box and phone copies before starting it on a VPS.
+Keep this backup private. Never upload it to GitHub or Drive.
