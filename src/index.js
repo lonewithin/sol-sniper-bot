@@ -30,20 +30,20 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
   if(why&&why.startsWith('liquidity')&&m.tier!=='SKIP'&&!t.liqRecheck&&d.score>=S.minScore){t.liqRecheck=true;console.log(`[recheck] ${d.symbol} liq $${(d.liqUsd||0).toFixed(0)} looks unindexed, re-scoring in 60s`);setTimeout(()=>{q.push(t);pump()},60000);return}
   const frOnly=(why==='auto off'||why==='snipe off')&&FR.anyAuto(); // owner not buying, but friends with auto on still get this coin
-  if(why){CT.skip(why);if(why!=='auto off'||true)MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why});if(!frOnly)return}
+  if(why){CT.skip(why);if(m.tier!=='SKIP')console.log(`[nobuy] ${d.symbol} ${m.tier} S${d.score}: ${why}`);if(why!=='auto off'||true)MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why});if(!frOnly)return}
   const hc=await HC.check(t.mint,d);console.log(`[holders] ${d.symbol} top10 ${hc.top10??'?'}% dev ${hc.dev??'?'}% (${hc.src}) ${hc.ok?'OK':'SKIP: '+hc.fails.join(', ')}`);
-  if(!hc.ok){CT.skip('holders concentrated');MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'holders concentrated'});return}
-  if(!frOnly&&T.paused()){CT.skip('loss-streak pause');console.log('[pause] skip',d.symbol);if(!FR.anyAuto())return}
+  if(!hc.ok){CT.skip('holders concentrated');console.log(`[nobuy] ${d.symbol} ${m.tier}: holders concentrated (${hc.fails.join(', ')})`);MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'holders concentrated'});return}
+  if(!frOnly&&T.paused()){CT.skip('loss-streak pause');console.log(`[nobuy] ${d.symbol} ${m.tier}: loss-streak pause`);if(!FR.anyAuto())return}
   const frGo=()=>FR.dispatch({mint:t.mint,symbol:d.symbol},{tier:m.tier,pot:m.potential,safety:d.score,src:t.src}).catch(e=>console.log('[friends] dispatch',e.message));
   const doBuy=async(f=m.f)=>{frGo();if(frOnly||T.paused())return;try{await T.buy({...t,symbol:d.symbol},S.buySol,{tier:m.tier,pot:m.potential,safety:d.score,features:{...f,top10:hc.top10,dev:hc.dev}});CT.bought();maybeRotate().catch(()=>{})}
-  catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log('buy skip',e.message)}};
+  catch(e){CT.skip('buy blocked: '+e.message.replace(/[\d.]+/g,'').trim());console.log(`[nobuy] ${d.symbol} ${m.tier}: ${e.message}`)}};
   if(!(S.confirmSec>0))return doBuy();
   console.log(`[confirm] ${d.symbol} waiting ${S.confirmSec}s (buys h1 ${pr?.txns?.h1?.buys??0}, price ${pr?.priceUsd})`);
   const b0=pr?.txns?.h1?.buys||0,p0=+(pr?.priceUsd||0);
   setTimeout(async()=>{try{const p2=(await pairsFor([t.mint]))[t.mint];const b1=p2?.txns?.h1?.buys||0,p1=+(p2?.priceUsd||0);const drop=p0&&p1?(1-p1/p0)*100:100;const m5=p2?.txns?.m5||{};
    const fails=[];if(!p2)fails.push('no pair');if(b1-b0<S.confirmMinBuys)fails.push(`only ${b1-b0} new buys`);if(drop>S.confirmMaxDropPct)fails.push(`price -${drop.toFixed(1)}%`);const riseCap=m.tier==='RUNNER'&&S.runnerConfirmMaxRisePct>0?S.runnerConfirmMaxRisePct:S.confirmMaxRisePct;if(riseCap>0&&-drop>riseCap)fails.push(`price +${(-drop).toFixed(1)}% chase`);if((m5.buys||0)<(m5.sells||0))fails.push('5m sells > buys');
    console.log(`[confirm] ${d.symbol} +${b1-b0} buys, price ${drop>0?'-':'+'}${Math.abs(drop).toFixed(1)}% → ${fails.length?'SKIP: '+fails.join(', '):'BUY'}`);
-   if(fails.length){CT.skip('confirm: '+fails[0].replace(/[\d.-]+%?/g,'').trim());MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'failed confirmation'});return}
+   if(fails.length){console.log(`[nobuy] ${d.symbol} ${m.tier}: failed 90s confirm (${fails.join(', ')})`);CT.skip('confirm: '+fails[0].replace(/[\d.-]+%?/g,'').trim());MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'failed confirmation'});return}
    if(T.paused()&&!FR.anyAuto())return console.log('[pause] skip',d.symbol);await doBuy({...m.f,confirmBuys:b1-b0,confirmDrop:+drop.toFixed(1)})}catch(e){console.log('confirm err',e.message)}},S.confirmSec*1000);
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
 let monBusy=false;setInterval(async()=>{if(monBusy)return;monBusy=true;try{await T.monitor()}catch(e){console.log('monitor err',e.message)}finally{monBusy=false}},(S.monitorSec||5)*1000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));require('./signals').start(m=>console.log(m),say);
