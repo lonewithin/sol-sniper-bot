@@ -60,7 +60,7 @@ tiers:['🎯 Snipe + Let it run',`Each coin gets a <b>potential score</b> (0–1
 <b>Let it run</b> (ON, /set letRun) for every snipe:
 • stop loss −15%
 • sells 30% at +50% (1.5x), then the stop on the rest moves to break-even
-• the rest rides a 20% trailing stop from its peak, up to 6 hours
+• the rest rides a 20% trailing stop from its peak, up to 12 hours
 So a 10x is not sold at +20%. Expect about 1 win in 4, with rare big winners paying for small losses.
 /set letRun false = old quick exits.
 <b>Entry checks</b>: safety, liquidity, holders, 90s confirm wait, no buying 5m spikes over +20%.`],
@@ -73,7 +73,7 @@ skills:['🧠 Skills',`<b>Skills</b> are extra checks. Each was backtested on re
 💧 <b>Volume-dry exit</b>: OFF, it lost money with Let it run.
 
 Not used for Moonbag or manual buys. /skills shows what each did. Switch in /set → Skills.`],
-big:['🐋 Big Play',`Buys older coins (1h+), market cap $100k–$10M, liquidity $50k+, more buyers than sellers, rising volume. /bigplay on|off.
+big:['🐋 Big Play',`Buys older coins (1h+), market cap $100k–$10M, liquidity $50k+, more buyers than sellers, rising volume. /bigplay on|off. OFF by default (lost money in both halves of paper testing).
 <b>Exits</b>: sells half at +50% (1.5x). The rest sells if it falls 40% from its peak or back to entry. Stop loss −25%.
 <b>Profit lock</b>: peaked +20% but never hit +50%? Sells when the gain falls back to +3%.
 <b>Hold</b>: 4h, extended 2h at a time while climbing, up to 24h. <b>Flat exit</b> after 50 min under +5%.
