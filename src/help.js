@@ -40,12 +40,12 @@ They do not apply to Moonbag or manual buys. If price candles can't be loaded, t
 See what each one did with /skills. Switch them in /set → Skills.`],
 moon:['🌙 Moonbag',`<b>🌙 Moonbag</b> is a third strategy, separate from Snipe and Big Play. It hunts coins that could run 10–100x.
 
-<b>Rules</b> come from a backtest of 613 coins the bot saw (real price candles, costs included, checked on later coins it wasn't tuned on).
+<b>Rules</b> come from runner backtests: a 2-month list of 484 coins from Raydium, PumpSwap, pump.fun, Meteora and LaunchLab, plus 613 coins the bot saw. Settings were picked on the earlier coins and checked on the later ones.
 <b>Buys</b> scanned coins with safety 70+ and liquidity $15k+.
 <b>Size</b>: 0.05 SOL. Up to 3 Moonbag coins at once (Snipe and Big Play each have their own 3).
-<b>Before 2x</b>: stop loss −30%. Once up 10%+, it sells if it drops 15 points from its peak.
-<b>Ladder</b>: sells 50% at 2x and another 25% at 5x.
-<b>The last 25%</b> rides until it falls 15% from its peak, or 8h.
+<b>Before 3x</b>: stop loss −40% (runners often dip hard first).
+<b>Ladder</b>: sells 25% at 3x and another 25% at 10x. After the first sell, the rest is sold if price falls back to entry.
+<b>The last 50%</b> rides until it falls 30% from its peak, or 10 days.
 
 Every trade records the best multiple the coin reached. See /pnl and /gpnl. Change any rule in /set → Moonbag. Paper only.`],
 runner:['🏃 Runner path',`A Big Play entry for young coins already trending.

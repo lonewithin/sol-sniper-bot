@@ -70,11 +70,12 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   const f1=x=>require('./fmt').px(x);const armRule=['SECOND','RUNNER','BIG'].includes(p.tier);const trail=r.trail||S.trailingPct;
   const armed=!armRule||p.peak>=S.trailArmPct||age>=S.trailGraceMin;
   if(p.tier==='MOON'){p.maxX=+(1+p.peak/100).toFixed(2);
-   if(!p.halfDone&&curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry before 2x (limit −${r.sl}%). Total ${f1(ch)}`;
+   if(!p.halfDone&&curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry before the first take-profit (limit −${r.sl}%). Total ${f1(ch)}`;
    else if(!p.halfDone&&S.moonPreTrail>0&&p.peak>=10&&curCh<=p.peak-S.moonPreTrail)why=`🌙 Early trail: peaked ${f1(p.peak)} before 2x, fell ${S.moonPreTrail} pts, closed at ${f1(curCh)}`;
    else if(!p.halfDone&&curCh>=S.moonLockAt){p.halfDone=true;p.moonSold=S.moonSellPct;await sell(p,`🌙 Moonbag lock: sold ${S.moonSellPct}% at ${f1(curCh)} (target +${S.moonLockAt}%). The other ${100-S.moonSellPct}% rides with a ${r.trail}% trailing stop from the peak`,S.moonSellPct/100);continue;}
    else if(p.halfDone&&!p.tp2&&S.moonTp2Pct>0&&curCh>=S.moonTp2At){p.tp2=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp2Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp2At}%)`,pc/left);continue;}
    else if(p.halfDone&&!p.tp3&&S.moonTp3Pct>0&&curCh>=S.moonTp3At){p.tp3=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp3Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp3At}%)`,pc/left);continue;}
+   else if(p.halfDone&&S.moonBreakeven&&curCh<=0)why=`🌙 Breakeven stop: after the first take-profit, price fell back to entry. Total ${f1(ch)}`;
    else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-r.trail/100))why=`🌙 Moonbag trail: fell ${r.trail}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
    else if(p.tier!=='MOON'&&(why=require('./skills').volExit(p,pairs[p.mint],curCh,age)))0;
   else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
