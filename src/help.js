@@ -14,9 +14,7 @@ Tap a section below to learn each part. Change any rule in /set.`],
 tiers:['🎯 Snipe tiers',`Each coin gets a <b>potential score</b> (0–100). The score picks the tier.
 
 💵 <b>Trade size (paper)</b>: every trade is $5–$10, converted to SOL at the live price. Low grades (Scalp/Second) $5, Swing ~$6, Runner $8, Big Play and Moonbag $10. Change with /set buyUsdMin and /set buyUsdMax (or /set → Size). The × sizes below apply only if $ sizing is off.
-<b>Scalp</b> (score 42+): small buy (0.4× size). Takes profit at +20%, stop loss at −12%, max 4 min.
-<b>Swing</b> (55+): 0.8× size. Takes profit at +50%, stop loss at −18%, 15% trailing stop, max 15 min.
-<b>Runner</b> (75+): 1.5× size. Sells half at +50%, stop loss at −25%, 20% trailing stop, max 30 min.
+<b>Let it run</b> (default ON, /set letRun): every snipe (Scalp 0.4×, Swing 0.8×, Runner 1.5× size) uses the same exits: stop loss −15%, sell 30% at +50% (stop on the rest moves to breakeven), the rest rides a 20% trailing stop from its peak, max 6 h. No quick +20% take-profit, so a 10x is not sold at +20%. Expect a lower win rate with bigger winners. Turn it off with /set letRun false to go back to the old Scalp/Swing exits.
 
 Runners also have a <b>profit lock</b>: once up 20%, it sells if the gain falls back to +3%.
 Runners skip thin pools (under $20k) and coins that jumped over 10% during the confirm wait.`],

@@ -22,7 +22,7 @@ function potential(pair,{safety=0,holders=null,mint}={}){
  const pot=Math.max(0,Math.min(100,pts+20));
  const tier=safety<S.minScore?'SKIP':pot>=S.potRunner?'RUNNER':pot>=S.potSwing?'SWING':pot>=S.potScalp?'SCALP':'SKIP';
  return {potential:pot,tier,reasons:R,f:{buys:b,sells:s,ratio:+ratio.toFixed(2),accel:+accel.toFixed(2),pc5,liq,liqCh:+liqCh.toFixed(1),hGrow:+hGrow.toFixed(1),v5,safety}};}
-function rules(tier){return {
+function rules(tier){if(S.letRun&&['SCALP','SWING','RUNNER'].includes(tier)){const sz={SCALP:S.scalpSize,SWING:S.swingSize,RUNNER:S.runnerSize}[tier];return {tp:0,sl:S.runnerSl,trail:S.runnerTrail,pctTrail:true,maxMin:S.runnerMaxMin,partialAt:S.runnerPartialAt,partialFrac:(S.runnerPartialPct||50)/100,size:sz,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100};}return {
  SCALP:{tp:S.scalpTp,sl:S.scalpSl,trail:0,maxMin:S.scalpMaxMin,partialAt:0,size:S.scalpSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100},
  SWING:{tp:S.swingTp,sl:S.swingSl,trail:S.swingTrail,maxMin:S.swingMaxMin,partialAt:0,size:S.swingSize,earlyAt:S.earlyTpAt,earlyFrac:S.earlyTpPct/100},
  BIG:{tp:0,sl:S.bigSl,trail:S.bigTrail,maxMin:(S.bigBaseHoldH||4)*60,partialAt:S.bigPartialAt,size:1},

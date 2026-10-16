@@ -43,9 +43,9 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.lo
   await c.reply(S.paper?'[paper] Creating new burner (no funds moved)…':'Creating new burner and sweeping funds…');try{const r=await rotate();await bot.sendNewBurner(r)}catch(e){c.reply('❌ '+e.message)}});
  bot.command('strategy',c=>c.reply(`🧭 Strategy
 Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume accel + price m5 + liq Δ + holder Δ + activity + safety.
-• SCALP (pot ≥ ${S.potScalp}): TP +${S.scalpTp}% · SL -${S.scalpSl}% · max ${S.scalpMaxMin}m · size ×0.6
+${S.letRun?'• LET IT RUN ON: all tiers use the RUNNER exits (SL -'+S.runnerSl+'%, sell '+S.runnerPartialPct+'% at +'+S.runnerPartialAt+'%, '+S.runnerTrail+'% trail from peak, max '+S.runnerMaxMin+'m)\n':''}• SCALP (pot ≥ ${S.potScalp}): TP +${S.scalpTp}% · SL -${S.scalpSl}% · max ${S.scalpMaxMin}m · size ×0.6
 • SWING (pot ≥ ${S.potSwing}): TP +${S.swingTp}% · SL -${S.swingSl}% · trail ${S.swingTrail}% · max ${S.swingMaxMin}m · size ×1
-• RUNNER (pot ≥ ${S.potRunner}): sell 50% at +${S.runnerPartialAt}%, trail ${S.runnerTrail}% rest · SL -${S.runnerSl}% · max ${S.runnerMaxMin}m · size ×1.5
+• RUNNER (pot ≥ ${S.potRunner}): sell ${S.runnerPartialPct}% at +${S.runnerPartialAt}%, trail ${S.runnerTrail}% (of peak) rest · SL -${S.runnerSl}% · max ${S.runnerMaxMin}m · size ×1.5
 Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling ${S.sizeByPotential?'ON':'OFF'} (always capped at ${S.maxPerTrade} SOL/trade, ${S.maxDailySol}/day). Autotune ${S.autotune?'ON':'OFF'}.`));
  require('./dashboard').install(bot);
  const profitMenu=async()=>{const SW=require('./sweep');const p=await SW.plan().catch(()=>({bal:0,amt:0}));const t=SW.todayPnl();
