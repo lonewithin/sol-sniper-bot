@@ -18,10 +18,12 @@
     "@solana/web3.js": "^1.99.0",
     "bs58": "^6.0.0",
     "chart.js": "^3.9.1",
-    "chartjs-node-canvas": "^4.1.6",
     "dotenv": "^18.0.8",
     "grammy": "^1.46.0",
     "ws": "^8.22.0"
   },
-  "private": false
+  "private": false,
+  "optionalDependencies": {
+    "chartjs-node-canvas": "^4.1.6"
+  }
 }

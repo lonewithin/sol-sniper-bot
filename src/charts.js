@@ -1,5 +1,5 @@
 // /c chart, /pnl summary, /pnl $TICKER per-coin PROM card. Paper-safe: read-only, never trades.
-const fs=require('fs'),path=require('path');const {InlineKeyboard,InputFile}=require('grammy');const {createCanvas}=require('canvas');
+const fs=require('fs'),path=require('path');const {InlineKeyboard,InputFile}=require('grammy');let createCanvas=null;try{({createCanvas}=require('canvas'))}catch{console.log('[charts] canvas not installed, chart images off')}
 const j=require('./http');const T=require('./trader');const {DATA,settings:S}=require('./config');const {resolve}=require('./lookup');const L=require('./log');
 const MINT=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;const SCANF=path.join(DATA,'scans.json');let scans={};try{scans=JSON.parse(fs.readFileSync(SCANF))}catch{}
 // first-detection record (kept forever, capped)
@@ -19,7 +19,7 @@ async function bestPair(mint){const a=await j('https://api.dexscreener.com/token
 async function candles(pool,tf){const [u,ag]=TF[tf];const r=await j(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${pool}/ohlcv/${u}?aggregate=${ag}&limit=100&currency=usd`);
  return (r?.data?.attributes?.ohlcv_list||[]).map(([t,o,h,l,c,v])=>({t:t*1000,o,h,l,c,v})).sort((a,b)=>a.t-b.t)}
 const BG='#0b0614',GRID='#2a1f3d',UP='#39ff88',DN='#ff3b6b',PUR='#b84dff',TXT='#e8e0ff',DIM='#8f84a8';
-function frame(W,H){const cv=createCanvas(W,H),x=cv.getContext('2d');const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#120824');g.addColorStop(1,BG);x.fillStyle=g;x.fillRect(0,0,W,H);
+function frame(W,H){if(!createCanvas)throw new Error('Chart images are off on this device (canvas not installed)');const cv=createCanvas(W,H),x=cv.getContext('2d');const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#120824');g.addColorStop(1,BG);x.fillStyle=g;x.fillRect(0,0,W,H);
  x.strokeStyle=PUR;x.lineWidth=3;x.shadowColor=PUR;x.shadowBlur=14;x.strokeRect(6,6,W-12,H-12);x.shadowBlur=0;return [cv,x]}
 const fp=v=>v<0.0001?v.toExponential(2):v<1?v.toPrecision(3):v.toFixed(2);
 function renderCandles(cs,{symbol,tf,entry}){const W=1000,H=560,[cv,x]=frame(W,H);const L0=70,R=W-90,T0=70,B=H-110,VB=H-40;
