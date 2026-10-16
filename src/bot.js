@@ -10,7 +10,7 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.lo
    if(!/not modified|query is too old/i.test(r.description||'')){const snip=(payload?.text||payload?.caption||payload?.media?.caption||'').slice(0,120).replace(/\n/g,'⏎');console.log('[tg fail]',method,r.error_code,r.description,'::',snip)}return {ok:true,result:method==='answerCallbackQuery'||method.startsWith('delete')?true:{}}}};bot.api.config.use(tgGuard);bot.tgGuard=tgGuard;
  require('./users').install(bot); // owner has full control; approved users read-only; others -> owner Accept/Deny
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
- require('./help').install(bot);require('./gpnl').install(bot);
+ require('./help').install(bot);require('./skills').install(bot);require('./gpnl').install(bot);
  bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));
  for(const k of ['snipe','bigplay'])bot.command(k,c=>{S[k]=/on/i.test(c.match);save();c.reply(`${k==='snipe'?'🎯 Snipe':'🐋 Big Play'} ${S[k]?'ON':'OFF'}${S.auto?'':' (note: /auto is off)'}`)});
  const stratKb=()=>new InlineKeyboard().text(`🎯 Snipe: ${S.snipe?'ON':'OFF'}`,'tg:snipe').text(`🐋 Big Play: ${S.bigplay?'ON':'OFF'}`,'tg:bigplay').row().text(`🤖 Auto: ${S.auto?'ON':'OFF'}`,'tg:auto').text(S.paper?'🧪 Paper':'🔴 LIVE','tg:info').row().text('💰 Profit / sweep menu','pf:menu');

@@ -4,7 +4,7 @@ const fs=require('fs'),path=require('path');const {InlineKeyboard}=require('gram
 const F=path.join(DATA||path.join(__dirname,'..','data'),'users.json');
 let U={allowed:{},denied:{}};try{U={...U,...JSON.parse(fs.readFileSync(F,'utf8'))}}catch{}
 const save=()=>{try{fs.writeFileSync(F,JSON.stringify(U,null,1))}catch(e){console.log('[users] save',e.message)}};
-const READONLY=['start','help','gpnl','gnpl','pnl','stats','positions','strategy','check','c'];
+const READONLY=['start','help','gpnl','gnpl','pnl','stats','positions','strategy','check','c','skills'];
 const esc=x=>String(x??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const who=f=>`${esc([f.first_name,f.last_name].filter(Boolean).join(' '))}${f.username?' @'+esc(f.username):''} (id <code>${f.id}</code>)`;
 const asked=new Map();

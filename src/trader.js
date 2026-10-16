@@ -36,6 +36,7 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
  if(!UNL()&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
  if(st.open.filter(p=>grp(p)===g).length>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint))throw new Error('already holding');
+ if(!manual&&tier!=='MOON'){let pr=null;try{pr=(await pairsFor([tok.mint]))[tok.mint]}catch{}const sk=await require('./skills').entryOk(tok.mint,tok.symbol||'?',pr);if(!sk.ok)throw new Error('skill '+sk.skill+': '+sk.why)}
  const lam=Math.round(sol*LAMPORTS_PER_SOL);const q=await quote(SOL,tok.mint,lam,S.slippageBps);
  const sig=S.paper?'PAPER':await swap(q);st.daily[dk]=+(spent+sol).toFixed(6);
  const decimals=await dec(tok.mint);const entry=sol/(Number(q.outAmount)/10**decimals);
@@ -73,7 +74,8 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
    else if(p.halfDone&&!p.tp2&&S.moonTp2Pct>0&&curCh>=S.moonTp2At){p.tp2=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp2Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp2At}%)`,pc/left);continue;}
    else if(p.halfDone&&!p.tp3&&S.moonTp3Pct>0&&curCh>=S.moonTp3At){p.tp3=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp3Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp3At}%)`,pc/left);continue;}
    else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-r.trail/100))why=`🌙 Moonbag trail: fell ${r.trail}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
-   else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
+   else if(p.tier!=='MOON'&&(why=require('./skills').volExit(p,pairs[p.mint],curCh,age)))0;
+  else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
    if(why)await sell(p,why);p.fails=0;continue;}
   if(curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry (limit −${r.sl}%). Total ${f1(ch)}`;
   else if(p.partial&&curCh<=0)why=`Breakeven stop: after taking some profit, price fell back to entry. Total ${f1(ch)}`;

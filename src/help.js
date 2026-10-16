@@ -30,6 +30,14 @@ It needs buyers to outnumber sellers and volume to be rising.
 <b>Modest-peak profit lock</b>: if it peaks 20%+ but never reaches the half-sell, it sells when the gain falls back to +3% (so a +22% blip does not trail into a loss). Real runners that hit +50% keep the trail.
 <b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
 <b>Flat exit</b>: sells after 50 min if it never got above +5%.`],
+skills:['🧠 Skills',`<b>Skills</b> are extra checks that make Snipe and Big Play pickier. Each one passed a backtest on real price candles, and was also checked on later trades it was not tuned on.
+
+🚫 <b>No chasing pumps</b>: skips a coin that already rose more than +50% (1.5x) in the last hour.
+📈 <b>Momentum check</b>: buys only if at least 2 of the last 3 five-minute candles were green and volume is rising.
+💧 <b>Volume-dry exit</b>: after 10 min, sells if 5-minute volume falls below half of what it was at entry while the trade is under +5%.
+
+They do not apply to Moonbag or manual buys. If price candles can't be loaded, the buy goes ahead without them.
+See what each one did with /skills. Switch them in /set → Skills.`],
 moon:['🌙 Moonbag',`<b>🌙 Moonbag</b> is a third strategy, separate from Snipe and Big Play. It hunts coins that could run 10–100x.
 
 <b>Buys</b> fresh coins that are busy (150+ buys, $10k+ 5m volume), buyer-led (buys÷sells 1.1+), with volume speeding up (1.5×+), $10k+ liquidity, safety 70+, not already spiking (5m between −15% and +120%).
@@ -98,10 +106,11 @@ cmds:['📋 Commands',`/help: this guide
 /export: back up the burner key (keep it private)
 /withdraw: send SOL out
 /profit, /sweep: profit sweep
-/cancel: stop typing a value`]};
+/cancel: stop typing a value
+/skills: which trading skills are on and what they did`]};
 const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]],i)=>{k.text((id===cur?'• ':'')+t,'help:'+id);if(i%2)k.row()});return k;};
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Beginner guide'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults'],['users','Approved users (owner)'],['adduser','Add a read-only user'],['removeuser','Remove a user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Beginner guide'],['skills','Trading skills on/off + impact'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults'],['users','Approved users (owner)'],['adduser','Add a read-only user'],['removeuser','Remove a user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};
