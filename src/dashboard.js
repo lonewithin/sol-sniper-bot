@@ -5,10 +5,11 @@ const sgn=x=>(x>=0?'+':'')+x.toFixed(4);
 function tstats(list){const n=list.length,w=list.filter(x=>x.pnl>0).length,i=list.reduce((a,x)=>a+x.solIn,0),o=list.reduce((a,x)=>a+x.solOut,0);
  const hold=n?list.reduce((a,x)=>a+(x.holdMin||(x.closed-x.opened)/6e4),0)/n:0;return {n,w,l:n-w,wr:n?w/n*100:0,pnl:o-i,pct:i?(o/i-1)*100:0,hold,avg:n?list.reduce((a,x)=>a+(x.pnlPct??0),0)/n:0};}
 const today=()=>{const d=SW.lagos().day;return T.st.closed.filter(x=>SW.lagos(new Date(x.closed)).day===d)};
+function modeBlock(n,on,fn,lim){const c=T.st.closed.filter(fn),x=tstats(c),px=require('./fmt').px,best=c.length?Math.max(...c.map(t=>t.peak||0)):null;return `<b>${n}</b> ${on?'ON':'OFF'}\n📊 ${x.n} trades · win ${x.wr.toFixed(0)}%\n💰 ${sgn(x.pnl)} SOL (${px(x.pct)})\n🚀 Best reached: ${best==null?'-':px(best)}\n📂 Open ${T.st.open.filter(fn).length}/${lim}`}
 function overview(){const c=C.get();const A=tstats(T.st.closed),D=tstats(today());
  const blk=(t,h,x)=>`<b>${t}</b>\n🔎 Scanned ${h.scanned} · 🔔 Alerted ${h.alerted}\n🛒 Bought ${h.bought} · ⏭ Skipped ${h.skipped}\n📊 Trades ${x.n} · ✅ ${x.w} · 🔻 ${x.l}\n🎯 Win rate ${x.wr.toFixed(0)}% ${bar(x.wr)}\n💰 PnL ${sgn(x.pnl)} SOL (${require('./fmt').px(x.pct)})\n⏱ Avg hold ${x.hold.toFixed(1)} min`;
  const bs=tstats(T.st.closed.filter(x=>x.tier==='BIG')),ss=tstats(T.st.closed.filter(x=>x.tier!=='BIG'&&x.tier!=='MOON')),ms=tstats(T.st.closed.filter(x=>x.tier==='MOON'));
- return `📋 <b>OVERVIEW</b>\n⏳ Uptime ${dur(Date.now()-c.boot)}\n${S.paper?'🧪 PAPER (test)':'🔴 LIVE'} · Auto ${S.auto?'ON ✅':'OFF ⛔'} · ${S.mode==='fast'?'⚡ fast':'🛡 safe'}\n\n${blk('📅 Today',c.today,D)}\n\n${blk('🗂 All-time',c.all,A)}\n\n<b>🧩 PnL by strategy</b>\n🎯 Snipe ${S.snipe?'ON':'OFF'}: ${sgn(ss.pnl)} SOL (${require('./fmt').px(ss.pct)}) · ${ss.n} trades · win ${ss.wr.toFixed(0)}%\n💎 Big Play ${S.bigplay?'ON':'OFF'}: ${sgn(bs.pnl)} SOL (${require('./fmt').px(bs.pct)}) · ${bs.n} trades · win ${bs.wr.toFixed(0)}%\n🌙 Moonbag ${S.moon?'ON':'OFF'}: ${sgn(ms.pnl)} SOL (${require('./fmt').px(ms.pct)}) · ${ms.n} trades · win ${ms.wr.toFixed(0)}%`;}
+ return `📋 <b>OVERVIEW</b>\n⏳ Uptime ${dur(Date.now()-c.boot)}\n${S.paper?'🧪 PAPER (test)':'🔴 LIVE'} · Auto ${S.auto?'ON ✅':'OFF ⛔'} · ${S.mode==='fast'?'⚡ fast':'🛡 safe'}\n\n${blk('📅 Today',c.today,D)}\n\n${blk('🗂 All-time',c.all,A)}\n\n<b>🧩 By mode</b>\n${modeBlock('🎯 Snipe',S.snipe,x=>x.tier!=='BIG'&&x.tier!=='MOON',S.maxOpen)}\n\n${modeBlock('💎 Big Play',S.bigplay,x=>x.tier==='BIG',S.bigMaxOpen)}\n\n${modeBlock('🌙 Moonbag',S.moon,x=>x.tier==='MOON',S.moonMaxOpen)}`;}
 function hunting(){const {all:a,today:t}=C.get();const src=Object.entries(a.bySrc).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`• ${k}: ${v}`).join('\n')||'• none yet';
  const sk=Object.entries(a.skip).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([k,v])=>`• ${k}: ${v}`).join('\n')||'• none yet';
  return `🎯 <b>HUNTING</b> (all-time)\n\n<b>📡 Scanned by source</b>\n${src}\n\n<b>⏭ Top skip reasons</b>\n${sk}\n\n<b>📏 Averages</b>\n🛡 Safety ${a.scored?(a.safetySum/a.scored).toFixed(0):'-'}/100\n🚀 Potential ${a.scored?(a.potSum/a.scored).toFixed(0):'-'}/100\n\n⚡ Fastest detect→buy: ${a.bestLatMs!=null?a.bestLatMs+' ms':'n/a (no fast buys yet)'}\n📅 Today scanned ${t.scanned}`;}
@@ -28,4 +29,4 @@ const kb=cur=>{const k=new InlineKeyboard();Object.entries(SECT).forEach(([id,[t
 function install(bot){
  bot.command('stats',async c=>c.reply(await overview(),{parse_mode:'HTML',reply_markup:kb('ov')}));
  bot.callbackQuery(/^st:(\w+)$/,async c=>{const id=c.match[1];c.answerCallbackQuery();if(SECT[id])c.editMessageText(await SECT[id][1](),{parse_mode:'HTML',reply_markup:kb(id)}).catch(()=>{})});}
-module.exports={install};
+module.exports={install,overview};
