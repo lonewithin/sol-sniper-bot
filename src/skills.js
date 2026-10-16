@@ -31,6 +31,7 @@ function report(){let L=[];try{L=fs.readFileSync(LF,'utf8').trim().split('\n').f
  const out=rows.map(([k,n,d])=>{const acts=L.filter(x=>x.skill===k&&x.t>=since&&x.kind!=='after'),aft=L.filter(x=>x.skill===k&&x.t>=since&&x.kind==='after');
   const avg=aft.length?aft.reduce((a,x)=>a+x.after30,0)/aft.length:null;const lab=k==='skillVolExit'?'exits':'blocks';
   return `${S[k]?'✅ ON ':'⛔ OFF'} <b>${n}</b>\n   ${d}\n   7d: ${acts.length} ${lab}${avg==null?'':` · coins moved ${px(avg)} in the 30 min after (${avg<0?'loss avoided':'missed gain'})`}`});
- return `🧠 <b>SKILLS</b> (Snipe + Big Play; not Moonbag)\n\n${out.join('\n\n')}\n\nTurn each on/off in /set → Skills. Details: /help → Skills.`}
+ let so=[];try{so=require('./log').trades().filter(t=>t.stopOvershoot!=null).slice(-20).map(t=>t.stopOvershoot)}catch{}
+ return `🧠 <b>SKILLS</b> (Snipe + Big Play; not Moonbag)\n\n${out.join('\n\n')}\n\n⏱ <b>Stop speed</b>: last ${so.length} stop-loss sells landed ${so.length?(so.reduce((a,b)=>a+b,0)/so.length).toFixed(1):'-'} pts past the limit on average (incl. 1.5% paper costs; before the faster checks: Snipe 5.5, Big Play 8.9)\n\nTurn each on/off in /set → Skills. Details: /help → Skills.`}
 function install(bot){bot.command('skills',c=>c.reply(report(),{parse_mode:'HTML'}))}
 module.exports={entryOk,volExit,report,install,candles};

@@ -25,7 +25,7 @@ It never re-buys coins with hard safety flags, coins first skipped as a spike, o
 big:['🐋 Big Play',`Big Play buys older coins (at least 1 hour old) with market cap $100k–$10M and liquidity of $50k or more.
 It needs buyers to outnumber sellers and volume to be rising.
 
-<b>Size</b>: fixed 0.05 SOL per trade.
+<b>Size</b>: fixed 0.025 SOL per trade (halved: Big Play lost money in tests unless one rare 20x coin was included).
 <b>Exits</b>: sells half at +50%. The other half is the runner: it sells only if it falls 40% from its peak (so a 20x keeps most of the run) or drops back to entry. Stop loss −25%.
 <b>Modest-peak profit lock</b>: if it peaks 20%+ but never reaches the half-sell, it sells when the gain falls back to +3% (so a +22% blip does not trail into a loss). Real runners that hit +50% keep the trail.
 <b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
@@ -40,11 +40,12 @@ They do not apply to Moonbag or manual buys. If price candles can't be loaded, t
 See what each one did with /skills. Switch them in /set → Skills.`],
 moon:['🌙 Moonbag',`<b>🌙 Moonbag</b> is a third strategy, separate from Snipe and Big Play. It hunts coins that could run 10–100x.
 
-<b>Buys</b> fresh coins that are busy (150+ buys, $10k+ 5m volume), buyer-led (buys÷sells 1.1+), with volume speeding up (1.5×+), $10k+ liquidity, safety 70+, not already spiking (5m between −15% and +120%).
+<b>Rules</b> come from a backtest of 613 coins the bot saw (real price candles, costs included, checked on later coins it wasn't tuned on).
+<b>Buys</b> scanned coins with safety 70+ and liquidity $15k+.
 <b>Size</b>: 0.05 SOL. Up to 3 Moonbag coins at once (Snipe and Big Play each have their own 3).
-<b>Before 2x</b>: hard stop loss −30%.
-<b>Ladder</b>: sells 50% at 2x, another 25% at 5x, another 15% at 10x.
-<b>The last 10%</b> (the moonbag) rides until it falls 45% from its peak, or 24h.
+<b>Before 2x</b>: stop loss −30%. Once up 10%+, it sells if it drops 15 points from its peak.
+<b>Ladder</b>: sells 50% at 2x and another 25% at 5x.
+<b>The last 25%</b> rides until it falls 15% from its peak, or 8h.
 
 Every trade records the best multiple the coin reached. See /pnl and /gpnl. Change any rule in /set → Moonbag. Paper only.`],
 runner:['🏃 Runner path',`A Big Play entry for young coins already trending.

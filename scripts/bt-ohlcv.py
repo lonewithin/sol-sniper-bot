@@ -9,7 +9,7 @@ def bars(m,t0):
 def sim(B,R):
   e=B[0][4];peak=1;rem=1.0;real=0.0;lad=list(R.get('ladder',[]));hit=False
   for i,(ts,o,h,l,c,v) in enumerate(B[1:],1):
-    age=i*5;lo,hi=l/e,h/e
+    age=i*R.get('bar',5);lo,hi=l/e,h/e
     # stops
     if not hit and lo<=1-R['sl']/100:return real+rem*(1-R['sl']/100),max(peak,hi)
     if R.get('lockAt') and not hit and peak>=1+R['lockAt']/100 and lo<=1+R['lockPct']/100:return real+rem*(1+R['lockPct']/100),peak
