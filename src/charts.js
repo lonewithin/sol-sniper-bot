@@ -46,7 +46,7 @@ async function chartMsg(q,tf='15m'){const mint=await parseCoin(q),pr=await bestP
  const kb=new InlineKeyboard();for(const k of Object.keys(TF))kb.text(k===tf?`• ${k} •`:k,`ch:${k}:${mint}`);kb.row().url('DexScreener','https://dexscreener.com/solana/'+mint).text('🧾 PnL card','pc:'+mint);
  return {png,cap,kb,mint}}
 // ---- /pnl summary ----
-const STRAT=p=>p.tier==='BIG'?'💎 Big Play':p.tier==='SECOND'?'🔁 Second chance':`🎯 Sniper ${p.tier==='FAST'?'SCALP':p.tier||'?'}`;
+const STRAT=p=>p.tier==='MOON'?'🌙 Moonbag':p.tier==='BIG'?'💎 Big Play':p.tier==='SECOND'?'🔁 Second chance':`🎯 Sniper ${p.tier==='FAST'?'SCALP':p.tier||'?'}`;
 function agg(a){const n=a.length,w=a.filter(x=>x.pnl>0).length,pnl=a.reduce((s,x)=>s+x.pnl,0),inn=a.reduce((s,x)=>s+x.solIn,0);return {n,w,pnl,wr:n?w/n*100:0,roi:inn?pnl/inn*100:0}}
 const line=(k,a)=>`${k}: <b>${sol(a.pnl)}</b> · ${a.n} trades · WR ${a.wr.toFixed(0)}%${a.n?` · ROI ${pct(a.roi)}`:''}`;
 function summary(){const C=T.st.closed,now=Date.now(),day=new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Lagos'}));day.setHours(0,0,0,0);

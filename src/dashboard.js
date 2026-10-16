@@ -7,7 +7,7 @@ function tstats(list){const n=list.length,w=list.filter(x=>x.pnl>0).length,i=lis
 const today=()=>{const d=SW.lagos().day;return T.st.closed.filter(x=>SW.lagos(new Date(x.closed)).day===d)};
 function overview(){const c=C.get();const A=tstats(T.st.closed),D=tstats(today());
  const blk=(t,h,x)=>`<b>${t}</b>\n🔎 Scanned ${h.scanned} · 🔔 Alerted ${h.alerted}\n🛒 Bought ${h.bought} · ⏭ Skipped ${h.skipped}\n📊 Trades ${x.n} · ✅ ${x.w} · 🔻 ${x.l}\n🎯 Win rate ${x.wr.toFixed(0)}% ${bar(x.wr)}\n💰 PnL ${sgn(x.pnl)} SOL (${x.pct.toFixed(1)}%)\n⏱ Avg hold ${x.hold.toFixed(1)} min`;
- const bs=tstats(T.st.closed.filter(x=>x.tier==='BIG')),ss=tstats(T.st.closed.filter(x=>x.tier!=='BIG'));
+ const bs=tstats(T.st.closed.filter(x=>x.tier==='BIG')),ss=tstats(T.st.closed.filter(x=>x.tier!=='BIG'&&x.tier!=='MOON'));
  return `📋 <b>OVERVIEW</b>\n⏳ Uptime ${dur(Date.now()-c.boot)}\n${S.paper?'🧪 PAPER (test)':'🔴 LIVE'} · Auto ${S.auto?'ON ✅':'OFF ⛔'} · ${S.mode==='fast'?'⚡ fast':'🛡 safe'}\n\n${blk('📅 Today',c.today,D)}\n\n${blk('🗂 All-time',c.all,A)}\n\n<b>🧩 PnL by strategy</b>\n🎯 Snipe ${S.snipe?'ON':'OFF'}: ${sgn(ss.pnl)} SOL · ${ss.n} trades · win ${ss.wr.toFixed(0)}%\n💎 Big Play ${S.bigplay?'ON':'OFF'}: ${sgn(bs.pnl)} SOL · ${bs.n} trades · win ${bs.wr.toFixed(0)}%`;}
 function hunting(){const {all:a,today:t}=C.get();const src=Object.entries(a.bySrc).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`• ${k}: ${v}`).join('\n')||'• none yet';
  const sk=Object.entries(a.skip).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([k,v])=>`• ${k}: ${v}`).join('\n')||'• none yet';

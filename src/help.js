@@ -5,9 +5,10 @@ start:['🚀 Start here',`<b>What this bot does</b>
 It finds new Solana meme coins, checks they look safe, and buys and sells them for you.
 Right now it runs in <b>paper mode</b>: fake money, real prices. No real SOL moves.
 
-<b>Two strategies</b>
+<b>Three strategies</b>
 🎯 <b>Snipe</b>: very young coins, held for minutes.
 🐋 <b>Big Play</b>: older coins with traction, held for hours.
+🌙 <b>Moonbag</b>: lock profit at 2x, let a small bag ride for 10x+.
 
 Tap a section below to learn each part. Change any rule in /set.`],
 tiers:['🎯 Snipe tiers',`Each coin gets a <b>potential score</b> (0–100). The score picks the tier.
@@ -29,6 +30,15 @@ It needs buyers to outnumber sellers and volume to be rising.
 <b>Modest-peak profit lock</b>: if it peaks 20%+ but never reaches the half-sell, it sells when the gain falls back to +3% (so a +22% blip does not trail into a loss). Real runners that hit +50% keep the trail.
 <b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
 <b>Flat exit</b>: sells after 50 min if it never got above +5%.`],
+moon:['🌙 Moonbag',`<b>🌙 Moonbag</b> is a third strategy, separate from Snipe and Big Play. It hunts coins that could run 10–100x.
+
+<b>Buys</b> fresh coins that are busy (300+ buys, $20k+ 5m volume), buyer-led (buys÷sells 1.2+), with volume speeding up (2×+), $15k+ liquidity, safety 70+, not already spiking (5m between −15% and +120%).
+<b>Size</b>: 0.05 SOL, up to 3 at once.
+<b>Before 2x</b>: hard stop loss −30%.
+<b>At 2x</b>: sells 80% to lock profit.
+<b>The last 20%</b> (the moonbag) rides until it falls 45% from its peak, or 24h.
+
+Every trade records the best multiple the coin reached. See /pnl and /gpnl. Change any rule in /set → Moonbag. Paper only.`],
 runner:['🏃 Runner path',`A Big Play entry for young coins already trending.
 It needs a 1h gain of 15%+ and a 6h gain of 40%+, rising 5m volume, and 15+ buyers in 5 min.
 It skips coins that rose more than 10% in the last 5 min or more than 400% in the last hour (likely blow-offs).
