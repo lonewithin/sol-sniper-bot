@@ -8,7 +8,7 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.lo
   for(let i=0;;i++){let r;try{r=await prev(method,payload,signal)}catch(e){console.log('[tg net]',method,e.message);return {ok:true,result:method==='answerCallbackQuery'||method.startsWith('delete')?true:{}}}
    if(r.ok)return r;const ra=r.parameters?.retry_after;if(r.error_code===429&&ra&&i<3){console.log('[tg 429]',method,'retry in',ra,'s');await new Promise(z=>setTimeout(z,Math.min(ra,60)*1000));continue}
    if(!/not modified|query is too old/i.test(r.description||'')){const snip=(payload?.text||payload?.caption||payload?.media?.caption||'').slice(0,120).replace(/\n/g,'⏎');console.log('[tg fail]',method,r.error_code,r.description,'::',snip)}return {ok:true,result:method==='answerCallbackQuery'||method.startsWith('delete')?true:{}}}};bot.api.config.use(tgGuard);bot.tgGuard=tgGuard;
- bot.use((ctx,next)=>ctx.from?.id===OWNER?next():undefined); // owner-only, silently ignore others
+ require('./users').install(bot); // owner has full control; approved users read-only; others -> owner Accept/Deny
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
  require('./help').install(bot);require('./gpnl').install(bot);
  bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));

@@ -26,6 +26,7 @@ It needs buyers to outnumber sellers and volume to be rising.
 
 <b>Size</b>: fixed 0.05 SOL per trade.
 <b>Exits</b>: sells half at +50%. The rest rides a 25% trailing stop. Stop loss −25%.
+<b>Modest-peak profit lock</b>: if it peaks 20%+ but never reaches the half-sell, it sells when the gain falls back to +3% (so a +22% blip does not trail into a loss). Real runners that hit +50% keep the trail.
 <b>Hold</b>: 4 hours, extended 2 hours at a time while it keeps climbing, up to 24 hours.
 <b>Flat exit</b>: sells after 50 min if it never got above +5%.`],
 runner:['🏃 Runner path',`A Big Play entry for young coins already trending.
@@ -61,6 +62,13 @@ unl:['♾ Unlimited test',`<b>paperUnlimited</b> is a paper-only test setting.
 When it is on, it turns off the daily SOL limits, the max coins at once, and the loss pause, and it acts as if the balance were endless.
 Trade sizes stay the same, so profit and loss stay comparable.
 <b>It never works in live mode.</b> If paper is off, every limit comes back.`],
+users:['👥 Users',`Only <b>you</b> (the owner) can change settings, wallets, export keys or trade.
+When someone new messages the bot, you get a message with <b>Accept</b> and <b>Deny</b> buttons.
+Accepted users can only view: /help /gpnl /pnl /stats /positions /strategy /check /c.
+/users: list approved users
+/adduser ID: add someone by their numeric Telegram id
+/removeuser ID: remove them
+No Termux or env changes needed. The list is saved in data/users.json.`],
 cmds:['📋 Commands',`/help: this guide
 /gpnl: profit and loss since the test started (or /gpnl 1h, 1d)
 /pnl: PnL summary. /pnl $TICKER for one coin
@@ -85,5 +93,5 @@ const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Beginner guide'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Beginner guide'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults'],['users','Approved users (owner)'],['adduser','Add a read-only user'],['removeuser','Remove a user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};

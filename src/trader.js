@@ -65,6 +65,7 @@ async function monitor(){const due=st.open.filter(p=>p.tier!=='BIG'||!p.lastChk|
   if(curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry (limit −${r.sl}%). Total ${f1(ch)}`;
   else if(p.partial&&curCh<=0)why=`Breakeven stop: after taking some profit, price fell back to entry. Total ${f1(ch)}`;
   else if(p.tier==='RUNNER'&&S.runnerLockAt>0&&p.peak>=S.runnerLockAt&&curCh<=S.runnerLockPct)why=`Profit lock: peaked +${p.peak.toFixed(0)}% then fell back to ${f1(curCh)}, selling before it turns into a loss. Total ${f1(ch)}`;
+  else if(p.tier==='BIG'&&S.bigLockAt>0&&p.peak>=S.bigLockAt&&p.peak<(S.bigPartialAt||50)&&!p.halfDone&&curCh<=S.bigLockPct)why=`Profit lock: peaked +${p.peak.toFixed(0)}% (under half-sell) then fell back to ${f1(curCh)}, selling before it turns into a loss. Total ${f1(ch)}`;
   else if(r.earlyAt&&!p.early&&!p.halfDone&&(!r.tp||r.tp>r.earlyAt)&&curCh>=r.earlyAt){p.early=true;await sell(p,`Early take-profit: sold ${Math.round(r.earlyFrac*100)}% at ${f1(curCh)} (target +${r.earlyAt}%). Stop on the rest moved to breakeven`,r.earlyFrac);continue;}
   else if(r.partialAt&&!p.halfDone&&curCh>=r.partialAt){p.halfDone=true;await sell(p,`Partial take-profit: sold half at ${f1(curCh)} (target +${r.partialAt}%). Stop moved to breakeven; the rest rides with a ${trail}% trailing stop`,0.5);continue;}
   else if(r.tp&&curCh>=r.tp)why=`Take profit: hit ${f1(curCh)} (target +${r.tp}%)`;
