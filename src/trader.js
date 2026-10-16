@@ -14,8 +14,8 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
 // Paper-only unlimited test mode: never applies when paper is off.
 const UNL=()=>S.paper===true&&S.paperUnlimited===true;
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
- sol=+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(!UNL()&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
+ const usdF=require('./usdsize').on()?await require('./usdsize').solFor('FAST'):null;sol=usdF?usdF.sol:+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
+ if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint))throw new Error('already holding');
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -34,8 +34,9 @@ const PEND={},PENDM=new Set();
 async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=null,features=null}={}){
  const moon=tier==='MOON';let r=moon?require('./moon').rules():(rules(tier)||rules('SWING'));if(tier==='BIG'&&features?.entry==='runner')r={...r,trail:S.runTrail};
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
- if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
- if(!UNL()&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
+ const US=require('./usdsize');let usdSz=null;if(!manual&&US.on())usdSz=await US.solFor(tier,require('./signals').todFactor().f||1);
+ if(usdSz)sol=usdSz.sol;else{if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);}const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
+ if(!UNL()&&!usdSz&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
  if(st.open.filter(p=>grp(p)===g).length+(PEND[g]||0)>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint)||PENDM.has(tok.mint))throw new Error('already holding');
  PEND[g]=(PEND[g]||0)+1;PENDM.add(tok.mint);try{ // reserve the slot while the async buy runs, so two coins bought at the same moment can't both slip past the per-mode limit
  if(!manual&&tier!=='MOON'){let pr=null;try{pr=(await pairsFor([tok.mint]))[tok.mint]}catch{}const sk=await require('./skills').entryOk(tok.mint,tok.symbol||'?',pr);if(!sk.ok)throw new Error('skill '+sk.skill+': '+sk.why)}

@@ -11,7 +11,7 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.lo
  require('./users').install(bot); // owner has full control; approved users read-only; others -> owner Accept/Deny
  const say=t=>bot.api.sendMessage(OWNER,t,{parse_mode:'HTML',link_preview_options:{is_disabled:true}}).catch(()=>{});
  require('./help').install(bot);require('./skills').install(bot);require('./gpnl').install(bot);
- bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /set capital SOL /export'));
+ bot.command('start',c=>c.reply('Sol Sniper ready. Tap /help for the beginner guide.\n /strategy /stats /settings /auto on|off /paper on|off /set key value /wallet /positions /pnl /check MINT /sellall /panic /withdraw ADDR AMOUNT|all /burners /newburner /profit /sweep /profitaddress /set capital SOL /export'));
  for(const k of ['snipe','bigplay'])bot.command(k,c=>{S[k]=/on/i.test(c.match);save();c.reply(`${k==='snipe'?'🎯 Snipe':'🐋 Big Play'} ${S[k]?'ON':'OFF'}${S.auto?'':' (note: /auto is off)'}`)});
  const stratKb=()=>new InlineKeyboard().text(`🎯 Snipe: ${S.snipe?'ON':'OFF'}`,'tg:snipe').text(`🐋 Big Play: ${S.bigplay?'ON':'OFF'}`,'tg:bigplay').row().text(`🤖 Auto: ${S.auto?'ON':'OFF'}`,'tg:auto').text(S.paper?'🧪 Paper':'🔴 LIVE','tg:info').row().text('💰 Profit / sweep menu','pf:menu');
  bot.callbackQuery(/^tg:(snipe|bigplay|auto)$/,c=>{const k=c.match[1];S[k]=!S[k];save();c.answerCallbackQuery(`${k} ${S[k]?'ON':'OFF'}`);c.editMessageReplyMarkup({reply_markup:stratKb()}).catch(()=>{})});
@@ -20,16 +20,16 @@ function make(){const bot=new Bot(process.env.BOT_TOKEN);bot.catch(e=>console.lo
  bot.command('paper',c=>{S.paper=!/off/i.test(c.match);save();c.reply(`Mode: ${S.paper?'PAPER (no real trades)':'⚠️ LIVE — real SOL'}`)});
  bot.command('settings',c=>c.reply('<pre>'+JSON.stringify(S,null,1)+'</pre>\nChange: /set buySol 0.02',{parse_mode:'HTML',reply_markup:stratKb()}));
  bot.callbackQuery('pf:menu',async c=>{c.answerCallbackQuery();c.reply(...await profitMenu())});
- require('./setmenu').install(bot);require('./charts').install(bot);require('./lookup').install(bot);
- bot.command('set',c=>{if(!c.match.trim())return require('./setmenu').open(c);const [k,v]=c.match.split(/\s+/);if(!(k in S))return c.reply('Unknown key');
-  if(k==='profitAddress'){const {PublicKey}=require('@solana/web3.js');if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
+ require('./profaddr').install(bot);require('./setmenu').install(bot);require('./charts').install(bot);require('./lookup').install(bot);
+ bot.command('set',c=>{if(!c.match.trim())return require('./setmenu').open(c);let [k,v]=c.match.trim().split(/\s+/);if(/^profitaddress$/i.test(k))k='profitAddress';if(!(k in S))return c.reply('Unknown key');
+  if(k==='profitAddress'){if(!v)return require('./profaddr').ask(c);if(require('./profaddr').looksSecret(c.match.trim().slice(k.length))){c.api.deleteMessage(c.chat.id,c.message.message_id).catch(()=>{});return c.reply('⚠️ That looks like a private key / seed phrase. Deleted, NOT saved. Use your PUBLIC address.')}if(!require('./sweep').validAddr(v))return c.reply('Invalid wallet address. Send /profitaddress to be asked step by step.');S.profitAddress=v;save();return c.reply('profitAddress = '+v)}
   if(k==='secondChance'){S.secondChance=/^(on|true|1)$/i.test(v);save();return c.reply('secondChance = '+S.secondChance)}
   if(k==='missedAlerts'){S.missedAlerts=/^(on|true|1)$/i.test(v);save();return c.reply('missedAlerts = '+S.missedAlerts)}
   if(k==='alerts'){if(!['all','trades','score','off'].includes(v))return c.reply('alerts all|trades|score|off');S.alerts=v;save();return c.reply('alerts = '+v)}
   if(k==='mode'){if(!['fast','safe'].includes(v))return c.reply('mode fast|safe');S.mode=v;save();return c.reply('mode = '+v+(v==='fast'?' ⚡ (instant checks only before buy, full checks after)':''))}
   if(typeof S[k]==='boolean'){if(['auto','paper'].includes(k))return c.reply('Use /'+k);S[k]=/^(on|true|1)$/i.test(v);save();return c.reply(`${k} = ${S[k]}`)}const n=Number(v);if(!isFinite(n)||n<0)return c.reply('Bad number');
   if(k==='buySol'&&n>S.maxPerTrade)return c.reply(`buySol > maxPerTrade (${S.maxPerTrade})`);S[k]=n;save();c.reply(`${k} = ${n}`)});
- bot.command('wallet',async c=>c.reply(`Burner (${W.source()}): <code>${W.pub()}</code>\nBalance: ${await T.balance().catch(()=>'?')} SOL\nFund with SMALL amounts only.`,{parse_mode:'HTML'}));
+ bot.command('wallet',async c=>c.reply(`Burner (${W.source()}): <code>${W.pub()}</code>\nBalance: ${await T.balance().catch(()=>'?')} SOL\nTrade size: ${require('./usdsize').on()?require('./usdsize').table():'SOL-based (/set buySol)'}\nFund with SMALL amounts only.`,{parse_mode:'HTML'}));
  const {rotate}=require('./rotate');
  const sendKey=async(chat,i,note='')=>{const w=W.list()[i];const m=await bot.api.sendMessage(chat,`🔐 Burner #${i} ${w.pub}${note}\nPrivate key (base58 · Phantom/Solflare → Import Private Key). SAVE IT OFFLINE NOW — this message deletes in 60s:\n<tg-spoiler>${W.exportSecret(i)}</tg-spoiler>`,{parse_mode:'HTML'});setTimeout(()=>bot.api.deleteMessage(chat,m.message_id).catch(()=>{}),60000);};
  bot.sendNewBurner=async r=>{await say(`🔄 Rotated burner → #${r.index} <code>${r.to}</code>${r.paper?'\n[paper] nothing swept — move any funds manually':`\nSOL sweep: ${r.solSig||'none'} · token sweeps: ${r.tokenSigs.length}`}`);await sendKey(OWNER,r.index,' (new)');};
@@ -49,7 +49,7 @@ Safety ≥ ${S.minScore} required. Potential (0-100) = buy/sell ratio + volume a
 Re-checked every 10s; exits early if potential < ${S.momentumExit}. Size scaling ${S.sizeByPotential?'ON':'OFF'} (always capped at ${S.maxPerTrade} SOL/trade, ${S.maxDailySol}/day). Autotune ${S.autotune?'ON':'OFF'}.`));
  require('./dashboard').install(bot);
  const profitMenu=async()=>{const SW=require('./sweep');const p=await SW.plan().catch(()=>({bal:0,amt:0}));const t=SW.todayPnl();
-  return [`💰 Profit\nMode: ${S.autoSweep?'Auto daily 23:55 WAT':'Manual (reminder at 23:55 WAT)'}\nAddress: <code>${S.profitAddress}</code>\nToday's realized PnL: ${t.pnl>=0?'+':''}${t.pnl.toFixed(5)} SOL (${t.n} trades${t.paper?', incl. paper':''})\nSweepable now: ${p.amt} SOL (balance ${p.bal.toFixed(4)}, capital ${S.capital})`,{parse_mode:'HTML',reply_markup:new InlineKeyboard().text(S.autoSweep?'🔁 Switch to Manual':'🔁 Switch to Auto','pf:toggle').text('💸 Send now','pf:send')}];};
+  return [`💰 Profit\nMode: ${S.autoSweep?'Auto daily 23:55 WAT':'Manual (reminder at 23:55 WAT)'}\nAddress: <code>${S.profitAddress}</code>\nToday's realized PnL: ${t.pnl>=0?'+':''}${t.pnl.toFixed(5)} SOL (${t.n} trades${t.paper?', incl. paper':''})\nSweepable now: ${p.amt} SOL (balance ${p.bal.toFixed(4)}, capital ${S.capital})`,{parse_mode:'HTML',reply_markup:new InlineKeyboard().text(S.autoSweep?'🔁 Switch to Manual':'🔁 Switch to Auto','pf:toggle').text('💸 Send now','pf:send').row().text('✏️ Change address','pf:addr')}];};
  bot.command('profit',async c=>c.reply(...await profitMenu()));
  bot.callbackQuery('pf:toggle',async c=>{S.autoSweep=!S.autoSweep;save();const [t,o]=await profitMenu();c.editMessageText(t,o).catch(()=>{});c.answerCallbackQuery(S.autoSweep?'Auto ON':'Manual')});
  bot.callbackQuery('pf:send',async c=>{c.answerCallbackQuery();bot.api.sendMessage(OWNER,'Confirm sweep?',{reply_markup:new InlineKeyboard().text('✅ Confirm sweep','sw:go').text('❌ Cancel','sw:no')})});

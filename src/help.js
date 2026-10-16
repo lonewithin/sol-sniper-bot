@@ -13,6 +13,7 @@ Right now it runs in <b>paper mode</b>: fake money, real prices. No real SOL mov
 Tap a section below to learn each part. Change any rule in /set.`],
 tiers:['🎯 Snipe tiers',`Each coin gets a <b>potential score</b> (0–100). The score picks the tier.
 
+💵 <b>Trade size (paper)</b>: every trade is $5–$10, converted to SOL at the live price. Low grades (Scalp/Second) $5, Swing ~$6, Runner $8, Big Play and Moonbag $10. Change with /set buyUsdMin and /set buyUsdMax (or /set → Size). The × sizes below apply only if $ sizing is off.
 <b>Scalp</b> (score 42+): small buy (0.4× size). Takes profit at +20%, stop loss at −12%, max 4 min.
 <b>Swing</b> (55+): 0.8× size. Takes profit at +50%, stop loss at −18%, 15% trailing stop, max 15 min.
 <b>Runner</b> (75+): 1.5× size. Sells half at +50%, stop loss at −25%, 20% trailing stop, max 30 min.
@@ -107,11 +108,13 @@ cmds:['📋 Commands',`/help: this guide
 /export: back up the burner key (keep it private)
 /withdraw: send SOL out
 /profit, /sweep: profit sweep
+/profitaddress (or /set profitAddress): I ask for your wallet address, you paste it. Public address only!
+/set buyUsdMin 5 · /set buyUsdMax 10: trade size in $ (paper)
 /cancel: stop typing a value
 /skills: which trading skills are on and what they did`]};
 const kb=cur=>{const k=new InlineKeyboard();Object.entries(SEC).forEach(([id,[t]],i)=>{k.text((id===cur?'• ':'')+t,'help:'+id);if(i%2)k.row()});return k;};
 function install(bot){
  bot.command('help',c=>c.reply(SEC.start[1],{parse_mode:'HTML',reply_markup:kb('start')}));
  bot.callbackQuery(/^help:(\w+)$/,c=>{const s=SEC[c.match[1]];c.answerCallbackQuery();if(s)c.editMessageText(s[1],{parse_mode:'HTML',reply_markup:kb(c.match[1])}).catch(()=>{})});
- return bot.api.setMyCommands([['help','Beginner guide'],['skills','Trading skills on/off + impact'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults'],['users','Approved users (owner)'],['adduser','Add a read-only user'],['removeuser','Remove a user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
+ return bot.api.setMyCommands([['help','Beginner guide'],['skills','Trading skills on/off + impact'],['gpnl','PnL since test start or window (1h, 1d…)'],['wallet','Burner address & balance'],['settings','All settings'],['strategy','Tier rules'],['auto','Auto-buy on|off'],['snipe','Snipe strategy on|off'],['bigplay','Big Play strategy on|off'],['paper','Test mode on|off'],['check','Score a token'],['positions','Open trades'],['c','Coin chart: /c $TICKER'],['pnl','PnL summary · /pnl $TICKER card'],['stats','Stats & suggestions'],['profit','Profit sweep menu'],['sweep','Send profit now'],['profitaddress','Set the wallet that receives profit'],['sellall','Sell everything'],['panic','Stop + sell all'],['burners','List burners'],['newburner','New burner wallet'],['export','Back up key'],['withdraw','Send SOL out'],['set','Settings menu'],['reset','Reset settings to defaults'],['users','Approved users (owner)'],['adduser','Add a read-only user'],['removeuser','Remove a user']].map(([command,description])=>({command,description}))).catch(e=>console.log('setMyCommands',e.message));}
 module.exports={install,SEC};
