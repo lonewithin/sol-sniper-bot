@@ -41,7 +41,7 @@ async function dipScan(pairs,log,dry){if(!S.bigDipReclaim)return;let dirty=false
  if(px<w.low){w.low=px;continue}
  const ok=px>prev&&px>w.low*1.03&&(t5.buys||0)>(t5.sells||0)&&v5>pv5&&(p.priceChange?.m5||0)>0&&liq>=w.liq0*0.7&&liq>=S.runMinLiq;if(!ok)continue;
  w.done=true;dirty=true;if(T.st.open.find(x=>x.mint===m))continue;const d=await score(m).catch(()=>null);if(!d)continue;
- const hc=await require('./holders').check(m,d);const fail=[];if(d.hard?.length)fail.push('hard');if(d.score<S.bigMinScore)fail.push('safety '+d.score);if(hc.dev!=null&&hc.dev>S.maxDevHoldPct)fail.push('dev '+hc.dev+'%');if(hc.top10!=null&&hc.top10>S.dipMaxTop10Pct)fail.push('top10 '+hc.top10+'%');
+ const hc=await require('./holders').check(m,d);const fail=[];if(d.hard?.length)fail.push('hard');if(d.score<S.bigMinScore)fail.push('safety '+d.score);if(hc.dev!=null&&hc.dev>S.maxDevHoldPct)fail.push('dev '+hc.dev+'%');if(hc.top10!=null&&hc.top10>S.dipMaxTop10Pct)fail.push('top10 '+hc.top10+'%');const h24=+(p.priceChange?.h24||0);if(S.runMaxH24>0&&h24>S.runMaxH24)fail.push('24h +'+Math.round(h24)+'% > '+S.runMaxH24+'%');
  log(`[BIG] DIP RECLAIM ${d.symbol} (${w.why}) dip from ${w.hi} low ${w.low} now ${px} ${fail.length?'no: '+fail.join('; '):'BUY'}`);
  if(!fail.length&&!dry)try{await T.buy({mint:m,symbol:d.symbol},S.bigBuySol,{tier:'BIG',safety:d.score,features:{entry:'dip',mcap:p.marketCap||p.fdv,liq,pc:p.priceChange,px:+p.priceUsd}});require('./counters').bought()}catch(err){log('[BIG] buy skip '+err.message)}}
  if(dirty)dipSave()}
