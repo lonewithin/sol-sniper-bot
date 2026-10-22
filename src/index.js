@@ -47,7 +47,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
    if(fails.length){console.log(`[nobuy] ${d.symbol} ${m.tier}: failed 90s confirm (${fails.join(', ')})`);CT.skip('confirm: '+fails[0].replace(/[\d.-]+%?/g,'').trim());MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:'failed confirmation'});return}
    if(T.paused()&&!FR.anyAuto())return console.log('[pause] skip',d.symbol);await doBuy({...m.f,confirmBuys:b1-b0,confirmDrop:+drop.toFixed(1)})}catch(e){console.log('confirm err',e.message)}},S.confirmSec*1000);
  })().catch(e=>console.log('score err',e.message)).finally(()=>{busy--;pump()});}}
-let monBusy=false;setInterval(async()=>{if(monBusy)return;monBusy=true;try{await T.monitor()}catch(e){console.log('monitor err',e.message)}finally{monBusy=false}},(S.monitorSec||5)*1000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));require('./signals').start(m=>console.log(m),say);
+require('./moonguard').start();let monBusy=false;setInterval(async()=>{if(monBusy)return;monBusy=true;try{await T.monitor()}catch(e){console.log('monitor err',e.message)}finally{monBusy=false}},(S.monitorSec||5)*1000);require('./sweep').schedule(say);MP.start(say);require('./bigplay').start(m=>console.log(m));require('./signals').start(m=>console.log(m),say);
 MP.onCandidate(async(w,pair,gain)=>{if(T.st.open.find(p=>p.mint===w.mint))return false;
  const d=await score(w.mint,w);const m=potential(pair,{safety:d.score,holders:d.holders,mint:w.mint});const f=m.f;
  const fails=[];if(d.hard.length)fails.push('hard: '+d.hard.join(', '));if(d.score<S.secondChanceMinScore)fails.push(`safety ${d.score}<${S.secondChanceMinScore}`);
