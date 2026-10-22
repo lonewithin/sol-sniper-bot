@@ -30,7 +30,7 @@ async function build(){if(building||!S.smartWallets)return;building=true;let ok=
 const hits=new Map(),seen=new Set();let watchBusy=false;
 async function watch(){if(watchBusy||!S.smartWallets)return;watchBusy=true;try{const L2=smartList().slice(0,20);for(const w of L2){try{const r=await rpc('getSignaturesForAddress',[w,{limit:5}]);
   for(const s of r){if(seen.has(s.signature)||s.err||Date.now()/1000-(s.blockTime||0)>S.smartWindowMin*60){seen.add(s.signature);continue}seen.add(s.signature);
-   const b=await txBuys(s.signature,w);for(const m of b.mints){const h=hits.get(m)??new Map();h.set(w,s.blockTime*1000);hits.set(m,h);const n=smartCount(m);log(`[smart] ${w.slice(0,6)}… bought ${m} · ${n} smart wallet(s) in ${S.smartWindowMin}m${n>=S.smartMinWallets?' → SIGNAL':''}`)}await sleep(300)}}catch{}await sleep(300)}
+   const b=await txBuys(s.signature,w);for(const m of b.mints){const h=hits.get(m)??new Map();h.set(w,s.blockTime*1000);hits.set(m,h);const n=smartCount(m);try{fs.appendFileSync(path.join(DATA,'smart_buys.jsonl'),JSON.stringify({mint:m,wallet:w,tBuy:s.blockTime*1000,tSeen:Date.now(),n})+'\n')}catch{}log(`[smart] ${w.slice(0,6)}… bought ${m} · ${n} smart wallet(s) in ${S.smartWindowMin}m${n>=S.smartMinWallets?' → SIGNAL':''}`)}await sleep(300)}}catch{}await sleep(300)}
   if(seen.size>20000)seen.clear();}finally{watchBusy=false}}
 function smartCount(m){const h=hits.get(m);if(!h)return 0;const cut=Date.now()-S.smartWindowMin*6e4;for(const [w,t] of h)if(t<cut)h.delete(w);return h.size;}
 const hotMints=()=>[...hits.keys()].filter(m=>smartCount(m)>=S.smartMinWallets);

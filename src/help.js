@@ -81,12 +81,15 @@ big:['🐋 Big Play',`Buys older coins (1h+), market cap $100k–$10M, liquidity
 <b>Dip reclaim</b>: re-buys good coins that dipped 25%+ and are recovering.`],
 moon:['🌙 Moonbag',`Hunts coins that could run 10–100x. OFF by default (/set moon true).
 Buys coins with safety 70+ and liquidity $15k+, up to 3 at once.
-Stop loss −40% before the first sell. Sells 25% at 3x and 25% at 10x; then the rest sells if it drops back to entry or falls 30% from its peak (max 10 days).
+Stop loss −40% before the first sell. Sells 25% at 2x, 25% at 3x and 25% at 10x. After the first sell the rest sells if it drops back to entry or falls 30% from its peak, tightened to 20% once it has reached 3x (max 10 days).
 Rules: /set → Moonbag.`],
 safe:['🛡 Safety',`<b>Hard blocks</b> (never bought): creator can still mint or freeze, can't sell, known rugs.
 <b>Holders</b>: top 10 wallets up to 30%, dev up to 10%.
 <b>Confirm wait</b>: waits 90s; buys only if 3+ new buyers came and price didn't drop 10% or jump 20%.
 <b>Loss pause</b>: 3 losses in a row pause snipes 30 min.
+<b>Daily loss limit</b>: after losing 0.15 SOL in a day (UTC), all modes stop new buys until the next day (/set dailyLossLimitSol, 0 = off).
+<b>One coin, one mode</b>: a coin held or being bought by one mode is never bought by another.
+<b>Thin-pool re-check</b>: coins with safety 90+ and potential 75+ skipped only for a thin pool are re-checked after 5 min (/set thinRecheckMin).
 <b>Second chance</b> (OFF): buys skipped coins that pump later.
 /check ADDRESS: full safety score. Send a $TICKER or address on its own for a coin card.
 /panic: stop buying and sell everything.`],

@@ -13,10 +13,12 @@ async function swap(q){const kp=W.load();const r=await j('https://lite-api.jup.a
  const {sig}=await SND.signAndSend(Buffer.from(r.swapTransaction,'base64'),kp);await SND.confirm(sig);return sig;}
 // FAST buy via PumpPortal (bonding curve / PumpSwap). Returns position. Latency logged from detection time tDetect.
 // Paper-only unlimited test mode: never applies when paper is off.
+const dayLoss=()=>{const d=today();return st.closed.filter(c=>c.closed&&new Date(c.closed).toISOString().slice(0,10)===d).reduce((a,c)=>a+(c.pnl||0),0)};let lossNoted='';
+function lossGate(){if(!(S.dailyLossLimitSol>0))return;const l=dayLoss();if(l<=-S.dailyLossLimitSol){if(lossNoted!==today()){lossNoted=today();notify(`🛑 Daily loss limit hit: ${l.toFixed(4)} SOL today (limit −${S.dailyLossLimitSol}). New buys paused until 01:00 WAT (UTC midnight). Open positions are still managed. Change with /set dailyLossLimitSol`)}throw new Error('daily loss limit')}}
 const UNL=()=>S.paper===true&&S.paperUnlimited===true;
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  const usdF=require('./usdsize').on()?await require('./usdsize').solFor('FAST'):null;sol=usdF?usdF.sol:+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint)||PENDM.has(ev.mint))throw new Error('already holding');PENDM.add(ev.mint);try{
+ lossGate();if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint)||PENDM.has(ev.mint))throw new Error('already holding');PENDM.add(ev.mint);try{
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -36,7 +38,7 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  if(!manual){const tf=require('./signals').todFactor();if(tf.f<1){console.log(`[tod] ${tok.symbol||tok.mint} ${tier} size ×${tf.f}: ${tf.why}`);if(tf.f<=0)throw new Error('time-of-day skip');sol*=tf.f}}
  const US=require('./usdsize');let usdSz=null;if(!manual&&US.on())usdSz=await US.solFor(tier,require('./signals').todFactor().f||1);
  if(usdSz)sol=usdSz.sol;else{if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);}const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
- if(!UNL()&&!usdSz&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
+ if(!manual)lossGate();if(!UNL()&&!usdSz&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
  if(st.open.filter(p=>grp(p)===g).length+(PEND[g]||0)>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint)||PENDM.has(tok.mint))throw new Error('already holding');
  PEND[g]=(PEND[g]||0)+1;PENDM.add(tok.mint);try{ // reserve the slot while the async buy runs, so two coins bought at the same moment can't both slip past the per-mode limit
  if(!manual&&tier!=='MOON'){let pr=null;try{pr=(await pairsFor([tok.mint]))[tok.mint]}catch{}const sk=await require('./skills').entryOk(tok.mint,tok.symbol||'?',pr);if(!sk.ok)throw new Error('skill '+sk.skill+': '+sk.why)}
@@ -72,14 +74,15 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   const m=potential(pairs[p.mint],{safety:p.safety||S.minScore,mint:p.mint});p.potNow=m.potential;let why=null;
   const f1=x=>require('./fmt').px(x);const armRule=['SECOND','RUNNER','BIG'].includes(p.tier)||!!r.pctTrail;const trail=r.trail||S.trailingPct;
   const armed=!armRule||p.peak>=S.trailArmPct||age>=S.trailGraceMin;
-  if(p.tier==='MOON'){p.maxX=+(1+p.peak/100).toFixed(2);
+  if(p.tier==='MOON'){p.maxX=+(1+p.peak/100).toFixed(2);if(p.halfDone&&!p.tp0)p.lockDone=true;const mtr=p.peak>=S.moonTightAt&&S.moonTightTrail>0?Math.min(r.trail,S.moonTightTrail):r.trail;
    if(!p.halfDone&&curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry before the first take-profit (limit −${r.sl}%). Total ${f1(ch)}`;
    else if(!p.halfDone&&S.moonPreTrail>0&&p.peak>=10&&curCh<=p.peak-S.moonPreTrail)why=`🌙 Early trail: peaked ${f1(p.peak)} before 2x, fell ${S.moonPreTrail} pts, closed at ${f1(curCh)}`;
-   else if(!p.halfDone&&curCh>=S.moonLockAt){p.halfDone=true;p.moonSold=S.moonSellPct;await sell(p,`🌙 Moonbag lock: sold ${S.moonSellPct}% at ${f1(curCh)} (target +${S.moonLockAt}%). The other ${100-S.moonSellPct}% rides with a ${r.trail}% trailing stop from the peak`,S.moonSellPct/100);continue;}
+   else if(!p.tp0&&!p.lockDone&&S.moonTp0Pct>0&&curCh>=S.moonTp0At&&curCh<S.moonLockAt){p.tp0=true;p.halfDone=true;p.moonSold=S.moonTp0Pct;await sell(p,`🌙 Moonbag 2x take: sold ${S.moonTp0Pct}% at ${f1(curCh)} (target +${S.moonTp0At}%). Rest rides with breakeven + ${r.trail}% trail`,S.moonTp0Pct/100);continue;}
+   else if(!p.lockDone&&curCh>=S.moonLockAt){p.halfDone=true;p.lockDone=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonSellPct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag lock: sold ${pc}% at ${f1(curCh)} (target +${S.moonLockAt}%). The other ${100-p.moonSold}% rides with a ${S.moonTightTrail||r.trail}% trailing stop from the peak`,pc/left);continue;}
    else if(p.halfDone&&!p.tp2&&S.moonTp2Pct>0&&curCh>=S.moonTp2At){p.tp2=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp2Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp2At}%)`,pc/left);continue;}
    else if(p.halfDone&&!p.tp3&&S.moonTp3Pct>0&&curCh>=S.moonTp3At){p.tp3=true;const left=100-(p.moonSold||0),pc=Math.min(S.moonTp3Pct,left);p.moonSold=(p.moonSold||0)+pc;await sell(p,`🌙 Moonbag ladder: sold another ${pc}% of the original at ${f1(curCh)} (target +${S.moonTp3At}%)`,pc/left);continue;}
    else if(p.halfDone&&S.moonBreakeven&&curCh<=0)why=`🌙 Breakeven stop: after the first take-profit, price fell back to entry. Total ${f1(ch)}`;
-   else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-r.trail/100))why=`🌙 Moonbag trail: fell ${r.trail}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
+   else if(p.halfDone&&(1+curCh/100)<=(1+p.peak/100)*(1-mtr/100))why=`🌙 Moonbag trail: fell ${mtr}%+ from its ${p.maxX}x peak, closed the bag at ${(1+curCh/100).toFixed(2)}x. Total ${f1(ch)}`;
   else if(age>=r.maxMin)why=`Time limit: held ${(r.maxMin/60).toFixed(0)}h, closed at ${f1(ch)} (best ${p.maxX}x)`;
    if(why)await sell(p,why);p.fails=0;continue;}
   if(curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry (limit −${r.sl}%). Total ${f1(ch)}`;

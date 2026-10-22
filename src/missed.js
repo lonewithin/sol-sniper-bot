@@ -6,7 +6,7 @@ const save=()=>fs.writeFileSync(F,JSON.stringify(M));
 function add(c){if(!c.p0||M.watch[c.mint])return;M.watch[c.mint]={...c,t:Date.now(),peak:0,now:0,hit:[]};
  const k=Object.keys(M.watch);if(k.length>MAX){finish(M.watch[k[0]]);}save();}
 function finish(w){delete M.watch[w.mint];const pumped=w.real&&w.peak>=S.missedAlertPct,dumped=w.now<=-50;M.done[pumped?'pumped':dumped?'dumped':'flat']++;
- fs.appendFileSync(OUT,JSON.stringify({mint:w.mint,symbol:w.symbol,safety:w.safety,pot:w.pot,tier:w.tier,why:w.why,peakPct:+w.peak.toFixed(1),finalPct:+w.now.toFixed(1),t:w.t})+'\n');}
+ fs.appendFileSync(OUT,JSON.stringify({mint:w.mint,symbol:w.symbol,safety:w.safety,pot:w.pot,tier:w.tier,why:w.why,peakPct:+w.peak.toFixed(1),finalPct:+w.now.toFixed(1),t:w.t,path:w.path||[]})+'\n');}
 const links=m=>`<a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a> · <a href="https://pump.fun/coin/${m}">pump.fun</a>`;
 const j=require('./http');
 async function allPairs(mints){const out={};for(let i=0;i<mints.length;i+=30){try{for(const p of await j('https://api.dexscreener.com/tokens/v1/solana/'+mints.slice(i,i+30).join(','))){const m=p.baseToken?.address;(out[m]??=[]).push(p)}}catch{}}return out;}
@@ -28,7 +28,7 @@ async function poll(notify){const ws=Object.values(M.watch);if(!ws.length)return
   if(!p?.priceUsd)continue;
   // migration from curve to PumpSwap: follow to the new main pool but rebaseline price-consistently
   const b=bestPair(ps);if(b&&b.pairAddress!==w.pair&&(b.liquidity?.usd||0)>(p.liquidity?.usd||0)*3&&(b.liquidity?.usd||0)>=S.missedMinLiq){const k=+b.priceUsd/(+p.priceUsd||+b.priceUsd);w.p0=w.p0*k;w.pair=b.pairAddress;w.dex=b.dexId;p=b;}
-  const ch=(+p.priceUsd/w.p0-1)*100;w.now=ch;w.priceNow=+p.priceUsd;const q=quality(p);w.q=q;
+  const ch=(+p.priceUsd/w.p0-1)*100;w.now=ch;w.priceNow=+p.priceUsd;const q=quality(p);w.q=q;{const mi=Math.round((Date.now()-(w.t0||w.t))/6e4),pa=(w.path??=[]);if(!pa.length||mi-pa[pa.length-1][0]>=1){pa.push([mi,+ch.toFixed(1),Math.round(p.liquidity?.usd||0)]);if(pa.length>400)pa.splice(0,pa.length-400)}}
   if(!q.length)w.peak=Math.max(w.peak,ch); // only count peaks reached while the market was real
   if(hook&&!q.length&&S.secondChance&&S.auto&&S.snipe&&ch>=S.secondChanceGainPct&&!w.sc&&(!w.scT||Date.now()-w.scT>600000)){w.scT=Date.now();hook(w,p,ch).then(r=>{if(r)w.sc=true}).catch(()=>{})}
   if(q.length)continue;

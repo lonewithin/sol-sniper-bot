@@ -29,6 +29,7 @@ async function pump(){while(busy<3&&q.length){busy++;const t=q.shift();if(S.mode
   if(S.alerts==='all'&&!((d.liqUsd||0)<S.minLiqUsd&&d.score<S.minScore))card();
   else if(S.alerts==='score'&&m.tier!=='SKIP'&&d.score>=S.minScore)card();
   if(why&&why.startsWith('liquidity')&&m.tier!=='SKIP'&&!t.liqRecheck&&d.score>=S.minScore){t.liqRecheck=true;console.log(`[recheck] ${d.symbol} liq $${(d.liqUsd||0).toFixed(0)} looks unindexed, re-scoring in 60s`);setTimeout(()=>{q.push(t);pump()},60000);return}
+  if(why&&why.startsWith('thin ')&&S.thinRecheck&&!t.thinRecheck&&d.score>=S.thinRecheckMinScore&&m.potential>=S.thinRecheckMinPot){t.thinRecheck=true;console.log(`[recheck] ${d.symbol} S${d.score} P${m.potential} ${why}: re-checking in ${S.thinRecheckMin} min`);setTimeout(()=>{q.push(t);pump()},S.thinRecheckMin*6e4);MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why:why+' (re-check pending)'});return}
   const frOnly=(why==='auto off'||why==='snipe off')&&FR.anyAuto(); // owner not buying, but friends with auto on still get this coin
   if(why){CT.skip(why);if(m.tier!=='SKIP')console.log(`[nobuy] ${d.symbol} ${m.tier} S${d.score}: ${why}`);if(why!=='auto off'||true)MP.add({mint:t.mint,symbol:d.symbol,p0:d.priceUsd||null,safety:d.score,pot:m.potential,tier:m.tier,why});if(!frOnly)return}
   const hc=await HC.check(t.mint,d);console.log(`[holders] ${d.symbol} top10 ${hc.top10??'?'}% dev ${hc.dev??'?'}% (${hc.src}) ${hc.ok?'OK':'SKIP: '+hc.fails.join(', ')}`);
