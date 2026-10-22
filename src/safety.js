@@ -1,7 +1,12 @@
 const j=require('./http');const {RPC,SOL}=require('./config');
 const rpc=(method,params)=>j(RPC,{method:'POST',body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})}).then(r=>{if(r.error)throw new Error(r.error.message);return r.result});
 const JUP='https://lite-api.jup.ag/swap/v1';
-const quote=(i,o,a,bps=1500)=>j(`${JUP}/quote?inputMint=${i}&outputMint=${o}&amount=${a}&slippageBps=${bps}`);
+// Jupiter quote: serialized throttle (min gap), 4s cache, 429 backoff with jitter (free lite-api rate-limits hard)
+const QC=new Map();let qNext=0;const QGAP=+process.env.JUP_GAP_MS||1100;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function quote(i,o,a,bps=1500){const u=`${JUP}/quote?inputMint=${i}&outputMint=${o}&amount=${a}&slippageBps=${bps}`;const c=QC.get(u);if(c&&Date.now()-c.t<4000)return c.v;
+ let last;for(let k=0;k<4;k++){const now=Date.now(),at=Math.max(now,qNext);qNext=at+QGAP;if(at>now)await sleep(at-now);
+  try{const v=await j(u);QC.set(u,{t:Date.now(),v});if(QC.size>500)for(const [x,y] of QC)if(Date.now()-y.t>4000)QC.delete(x);return v}
+  catch(e){last=e;if(!/^429|^5\d\d|timeout|aborted|fetch failed/i.test(e.message||''))throw e;qNext=Date.now()+1500*2**k;await sleep(1500*2**k+Math.random()*1000)}}throw last}
 const rugRetry=async m=>{for(let i=0;i<3;i++){try{return await j(`https://api.rugcheck.xyz/v1/tokens/${m}/report`,{},10000)}catch(e){await new Promise(r=>setTimeout(r,1500*(i+1)))}}throw new Error('rugcheck')};
 async function score(mint,hint={}){
  const R=[],H=[];let pts=100;const pen=(n,why)=>{pts-=n;R.push(`⚠️ soft: ${why} (-${n})`)},hard=(n,why)=>{pts-=n;H.push(why);R.push(`⛔ HARD: ${why} (-${n})`)},ok=w=>R.push(`✅ ${w}`);const d={mint};

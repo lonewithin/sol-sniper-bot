@@ -87,7 +87,7 @@ safe:['🛡 Safety',`<b>Hard blocks</b> (never bought): creator can still mint o
 <b>Holders</b>: top 10 wallets up to 30%, dev up to 10%.
 <b>Confirm wait</b>: waits 90s; buys only if 3+ new buyers came and price didn't drop 10% or jump 20%.
 <b>Loss pause</b>: 3 losses in a row pause snipes 30 min.
-<b>Daily loss limit</b>: after losing 0.15 SOL in a day (UTC), all modes stop new buys until the next day (/set dailyLossLimitSol, 0 = off).
+<b>Daily loss limit</b>: after losing 0.15 SOL in a day (UTC), all modes stop new buys until the next day (/set dailyLossLimitSol, 0 = off). Live mode only; paper never pauses. Only coins bought that day count.
 <b>One coin, one mode</b>: a coin held or being bought by one mode is never bought by another.
 <b>Thin-pool re-check</b>: coins with safety 90+ and potential 75+ skipped only for a thin pool are re-checked after 5 min (/set thinRecheckMin).
 <b>Second chance</b> (OFF): buys skipped coins that pump later.
