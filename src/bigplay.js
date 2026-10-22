@@ -11,7 +11,7 @@ async function candidates(){const set=new Set();
  return [...set];}
 function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,age=p.pairCreatedAt?(Date.now()-p.pairCreatedAt)/36e5:0;
  const v1=p.volume?.h1||0,v6=p.volume?.h6||0,t=p.txns?.h1||{},ratio=((t.buys||0)+1)/((t.sells||0)+1);
- if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push(`mcap $${(mc/1e3).toFixed(0)}k`);if(liq<S.bigMinLiq)R.push(`liq $${(liq/1e3).toFixed(0)}k`);
+ if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push(`mcap $${(mc/1e3).toFixed(0)}k`);if(liq<S.bigMinLiq)R.push(`liq $${(liq/1e3).toFixed(0)}k`);if(S.bigLiqMcapCheck!==false&&mc>0&&liq>mc)R.push('liq > mcap (fake pool)');
  if(age<S.bigMinAgeH)R.push(`age ${age.toFixed(1)}h`);if(!(v1>v6/6))R.push('1h vol not above 6h avg');if(ratio<S.bigMinRatio)R.push(`buy/sell 1h ${ratio.toFixed(2)}`);
  const t5=p.txns?.m5||{},c=p.priceChange||{};if((t5.buys||0)<(t5.sells||0))R.push('5m sells > buys');if((c.m5||0)<-3||(c.h1||0)<-10)R.push('dumping');if((p.volume?.m5||0)<1000)R.push('5m vol < $1k');
  const v5=p.volume?.m5||0;if(v5<(v1/12)*S.bigMinVolAccel)R.push(`5m vol not rising (x${(v1?v5/(v1/12):0).toFixed(2)})`);if(v1<(v6/6)*S.bigMinVolAccel)R.push('1h vol not rising vs 6h');
@@ -21,7 +21,7 @@ function filter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.f
 // Runner path: young coin already trending (1h/6h) with rising 5m volume and buyers in control. Skips the 24h cap and 1h-vs-6h checks that block every live runner.
 function runnerFilter(p){const R=[];if(!p)return ['no pair'];const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,c=p.priceChange||{},t1=p.txns?.h1||{},t5=p.txns?.m5||{},v1=p.volume?.h1||0,v5=p.volume?.m5||0;
  const r1=((t1.buys||0)+1)/((t1.sells||0)+1),r5=((t5.buys||0)+1)/((t5.sells||0)+1);
- if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push('mcap');if(liq<S.runMinLiq)R.push('liq');if((c.h1||0)<S.runMinH1)R.push('h1 weak');if(S.runMaxH1>0&&(c.h1||0)>S.runMaxH1)R.push('h1 blow-off');if(S.runMaxH24>0&&(c.h24||0)>S.runMaxH24)R.push('h24 already ran');if((c.h6??c.h1??0)<S.runMinH6)R.push('h6 weak');
+ if(mc<S.bigMinMcap||mc>S.bigMaxMcap)R.push('mcap');if(liq<S.runMinLiq)R.push('liq');if(S.bigLiqMcapCheck!==false&&mc>0&&liq>mc)R.push('liq > mcap (fake pool)');if((c.h1||0)<S.runMinH1)R.push('h1 weak');if(S.runMaxH1>0&&(c.h1||0)>S.runMaxH1)R.push('h1 blow-off');if(S.runMaxH24>0&&(c.h24||0)>S.runMaxH24)R.push('h24 already ran');if((c.h6??c.h1??0)<S.runMinH6)R.push('h6 weak');
  if((c.m5||0)<0)R.push('m5 red');if((c.m5||0)>S.runMaxM5)R.push('m5 spike');if(r1<S.runMinRatio)R.push('1h buy/sell');if(r5<1)R.push('5m sells > buys');if(v5<Math.max(2000,(v1/12)*S.runMinVolAccel))R.push('5m vol not rising');if((t5.buys||0)<15)R.push('few 5m buyers');
  return R;}
 function entry(p){const c=p.priceChange||{};const m5=c.m5||0,h1=c.h1||0,h6=c.h6||0;
@@ -41,7 +41,7 @@ async function dipScan(pairs,log,dry){if(!S.bigDipReclaim)return;let dirty=false
  if(px<w.low){w.low=px;continue}
  const ok=px>prev&&px>w.low*1.03&&(t5.buys||0)>(t5.sells||0)&&v5>pv5&&(p.priceChange?.m5||0)>0&&liq>=w.liq0*0.7&&liq>=S.runMinLiq;if(!ok)continue;
  w.done=true;dirty=true;if(T.st.open.find(x=>x.mint===m))continue;const d=await score(m).catch(()=>null);if(!d)continue;
- const hc=await require('./holders').check(m,d);const fail=[];if(d.hard?.length)fail.push('hard');if(d.score<S.bigMinScore)fail.push('safety '+d.score);if(hc.dev!=null&&hc.dev>S.maxDevHoldPct)fail.push('dev '+hc.dev+'%');if(hc.top10!=null&&hc.top10>S.dipMaxTop10Pct)fail.push('top10 '+hc.top10+'%');const h24=+(p.priceChange?.h24||0);if(S.runMaxH24>0&&h24>S.runMaxH24)fail.push('24h +'+Math.round(h24)+'% > '+S.runMaxH24+'%');
+ const hc=await require('./holders').check(m,d);const fail=[];if(d.hard?.length)fail.push('hard');{const mc=p.marketCap||p.fdv||0;if(S.bigLiqMcapCheck!==false&&mc>0&&liq>mc)fail.push('liq > mcap (fake pool)')}if(d.score<S.bigMinScore)fail.push('safety '+d.score);if(hc.dev!=null&&hc.dev>S.maxDevHoldPct)fail.push('dev '+hc.dev+'%');if(hc.top10!=null&&hc.top10>S.dipMaxTop10Pct)fail.push('top10 '+hc.top10+'%');const h24=+(p.priceChange?.h24||0);if(S.runMaxH24>0&&h24>S.runMaxH24)fail.push('24h +'+Math.round(h24)+'% > '+S.runMaxH24+'%');
  log(`[BIG] DIP RECLAIM ${d.symbol} (${w.why}) dip from ${w.hi} low ${w.low} now ${px} ${fail.length?'no: '+fail.join('; '):'BUY'}`);
  if(!fail.length&&!dry)try{await T.buy({mint:m,symbol:d.symbol},S.bigBuySol,{tier:'BIG',safety:d.score,features:{entry:'dip',mcap:p.marketCap||p.fdv,liq,pc:p.priceChange,px:+p.priceUsd}});require('./counters').bought()}catch(err){log('[BIG] buy skip '+err.message)}}
  if(dirty)dipSave()}
