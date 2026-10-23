@@ -1,9 +1,14 @@
 const j=require('./http');const {RPC,SOL}=require('./config');
-const rpc=(method,params)=>j(RPC,{method:'POST',body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})}).then(r=>{if(r.error)throw new Error(r.error.message);return r.result});
+// read RPC: rotate across free endpoints on 429/5xx/timeout with backoff (public mainnet RPC rate-limits hard)
+const RPCS=[...new Set([RPC,...(process.env.RPC_URLS||'').split(',').map(x=>x.trim()).filter(Boolean),'https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com'])];let rpcI=0;const rpcBad=new Map();
+async function rpc(method,params){let last;for(let k=0;k<Math.min(4,RPCS.length+1);k++){let u=RPCS[rpcI%RPCS.length];if((rpcBad.get(u)||0)>Date.now()){rpcI++;u=RPCS[rpcI%RPCS.length]}
+ try{const r=await j(u,{method:'POST',body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})},7000);if(r.error){if(/429|rate|limit/i.test(r.error.message||'')){throw new Error('429 '+r.error.message)}throw Object.assign(new Error(r.error.message),{final:true})}return r.result}
+ catch(e){last=e;if(e.final)throw e;rpcBad.set(u,Date.now()+(/429/.test(e.message)?30000:10000));rpcI++;await new Promise(r=>setTimeout(r,400*2**k))}}throw last}
 const JUP='https://lite-api.jup.ag/swap/v1';
 // Jupiter quote: serialized throttle (min gap), 4s cache, 429 backoff with jitter (free lite-api rate-limits hard)
-const QC=new Map();let qNext=0;const QGAP=+process.env.JUP_GAP_MS||1100;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function quote(i,o,a,bps=1500){const u=`${JUP}/quote?inputMint=${i}&outputMint=${o}&amount=${a}&slippageBps=${bps}`;const c=QC.get(u);if(c&&Date.now()-c.t<4000)return c.v;
+const QC=new Map();let qNext=0,fastLast=0;const QGAP=+process.env.JUP_GAP_MS||1100;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function quote(i,o,a,bps=1500,opt={}){const u=`${JUP}/quote?inputMint=${i}&outputMint=${o}&amount=${a}&slippageBps=${bps}`;const c=QC.get(u);if(c&&Date.now()-c.t<4000)return c.v;
+ if(opt.fast){const n=Date.now();if(n<qNext-3000||n-fastLast<1200)throw new Error('429 local throttle (using DexScreener price)');fastLast=n;const v=await j(u,{},5000);QC.set(u,{t:Date.now(),v});return v} // open-position checks skip the scoring queue so stops are never stuck behind new-coin quotes
  let last;for(let k=0;k<4;k++){const now=Date.now(),at=Math.max(now,qNext);qNext=at+QGAP;if(at>now)await sleep(at-now);
   try{const v=await j(u);QC.set(u,{t:Date.now(),v});if(QC.size>500)for(const [x,y] of QC)if(Date.now()-y.t>4000)QC.delete(x);return v}
   catch(e){last=e;if(!/^429|^5\d\d|timeout|aborted|fetch failed/i.test(e.message||''))throw e;qNext=Date.now()+1500*2**k;await sleep(1500*2**k+Math.random()*1000)}}throw last}

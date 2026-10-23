@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 [ -n "$SNIPER_BOT_TOKEN" ] && [ -z "$BOT_TOKEN" ] && export BOT_TOKEN="$SNIPER_BOT_TOKEN"
 [ -z "$OWNER_ID" ] && export OWNER_ID=6360092082
 [ -z "$PAPER" ] && export PAPER=true
+nohup sh scripts/watchdog.sh >/dev/null 2>&1 &  # hang watchdog (single instance)
 while true; do
   node src/index.js
   ec=$?
