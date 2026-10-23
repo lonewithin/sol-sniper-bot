@@ -8,7 +8,7 @@ function connect(){w=new WS('wss://pumpportal.fun/api/data');subs=new Set();
 function held(){return T.st.open.filter(p=>p.tier==='MOON'||S.streamGuardAll!==false)} // all modes: rugs gap past 5s quote checks in every tier
 function sync(){if(!w||w.readyState!==1)return;const want=new Set(held().map(p=>p.mint));
  const add=[...want].filter(m=>!subs.has(m)),rm=[...subs].filter(m=>!want.has(m));
- if(add.length)w.send(JSON.stringify({method:'subscribeTokenTrade',keys:add}));if(rm.length)w.send(JSON.stringify({method:'unsubscribeTokenTrade',keys:rm}));
+ if(add.length){w.send(JSON.stringify({method:'subscribeTokenTrade',keys:add}));console.log('[moonguard] watching '+add.length+' held coin(s)')}if(rm.length)w.send(JSON.stringify({method:'unsubscribeTokenTrade',keys:rm}));
  subs=want;for(const m of M.keys())if(!want.has(m))M.delete(m)}
 function onTrade(x){if(!x.mint||!(x.marketCapSol>0))return;const p=held().find(q=>q.mint===x.mint);if(!p||p.selling)return;
  const now=Date.now();let g=M.get(x.mint);if(!g){g={ref:x.marketCapSol,ratio:p.last>0?p.last/(p.solIn*(Number(p.tokens)/Number(p.tokens0||p.tokens))):1,hist:[]};M.set(x.mint,g)}
