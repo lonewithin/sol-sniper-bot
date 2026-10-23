@@ -14,5 +14,6 @@ if(!s.edgeV1){Object.assign(s,{runnerMaxMin:720,bigplay:false,edgeV1:1});save();
 if(!s.moonV2){Object.assign(s,{moonMinBuys:50,moonMinVol5:20000,moonMinPc5:0,moonMaxPc5:50,moonBuySol:0.02,moonGuard:true,moonV2:1});save();} // Moon v2: real-flow entry (5m vol >= $20k, 5m change 0..50%, >=50 buys), see scripts/bt-moon2.py
 if(!s.bigV2){Object.assign(s,{bigplay:true,bigMaxH1:200,runMaxH1:200,bigV2:1});save();} // Big Play back on: skip coins already up >200% in 1h (train -$2.97->+$4.68, holdout -$1.33->+$1.32 at $10); sized at the $5 minimum since it's not robust after dropping the best trade
 if(!s.weekFixV1){Object.assign(s,{moonTp0At:100,moonTp0Pct:25,moonTightAt:200,moonTightTrail:20,maxEntryPc5:60,weekFixV1:1});save();} // bt-fixes.py: Moonbag 25%@2x + trail 20 after 3x (holdout $+23.5->$+33.2, drop-best -6.2->+6.4; train -36.9->-3.8); chase cap 20->60 (skipped bucket profitable in both halves, robust)
+if(!s.moonOffV3){Object.assign(s,{moon:false,moonOffV3:1});save();} // Moon paused (fresh test Oct 22-23: 0W/7L, 3 near -100% rugs; no robust exit fix on 7 trades). Open MOON positions still managed.
 if(!s.bigHoldV){s.bigMaxHoldH=24;s.bigHoldV=1;save();}
 module.exports={defaults,DATA,settings:s,save,RPC:process.env.RPC_URL||'https://api.mainnet-beta.solana.com',OWNER:Number(process.env.OWNER_ID||0),SOL:'So11111111111111111111111111111111111111112'};
