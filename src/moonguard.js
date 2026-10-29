@@ -17,7 +17,9 @@ function onTrade(x){if(!x.mint||!(x.marketCapSol>0))return;const p=held().find(q
  hi=Math.max(...g.hist.map(h=>h[1])),crash=(x.marketCapSol/hi-1)*100;
  const pool=x.vSolInBondingCurve||x.vSolInPool||0,big=x.txType==='sell'&&pool>0&&x.solAmount/pool>=(S.moonGuardBigSellPct||25)/100;
  const sl=p.tier==='MOON'?(S.moonSl||40):(p.rules?.sl||30);let why=null;const cap=Math.max(S.maxLossCapPct||0,sl),liq=x.liq,liq0=p.features?.liq||0;
- if(x.src==='poll'&&liq!=null&&(liq<(S.rugMinLiqUsd||1500)||(liq0>0&&S.rugLiqDropPct>0&&liq<liq0*(1-S.rugLiqDropPct/100)))){why=`⛔ Rug exit: pool liquidity $${Math.round(liq)} (was $${Math.round(liq0)} at entry), liquidity pulled`;p.rug=true}
+ const rugCond=x.src==='poll'&&liq!=null&&(liq<(S.rugMinLiqUsd||1500)||(liq0>0&&S.rugLiqDropPct>0&&liq<liq0*(1-S.rugLiqDropPct/100)));
+ if(rugCond&&!x.confirmed)confirmRug(p,x); // batch polls can drop a coin's main pool (KNOTS showed $34k vs a real $475k pool), so re-check this one coin before a rug exit
+ if(rugCond&&x.confirmed){why=`⛔ Rug exit: pool liquidity $${Math.round(liq)} (was $${Math.round(liq0)} at entry), liquidity pulled`;p.rug=true}
  else if(S.maxLossCapPct>0&&ch<=-cap&&!(p.tier==='MOON'&&p.halfDone))why=`⛔ Hard loss cap: ${ch.toFixed(0)}% from entry (cap -${cap}%)`;
  else if((p.tier!=='MOON'||p.peak<100)&&ch<=-sl)why=`⚡ Guard stop: price ${ch.toFixed(0)}% from entry (limit -${sl}%)`;
  else if(crash<=-(S.moonGuardCrashPct||35))why=`⚡ Crash exit: market cap fell ${crash.toFixed(0)}% inside 60s (rug / LP pull)`;
@@ -25,6 +27,14 @@ function onTrade(x){if(!x.mint||!(x.marketCapSol>0))return;const p=held().find(q
  if(!why)return;p.selling=true;const rest=Number(p.tokens)/Number(p.tokens0||p.tokens);p.last=Math.max(0,p.solIn*rest*(1+ch/100));if(p.rug&&liq0>0)p.last*=Math.min(1,liq/liq0); // paper honesty: a pulled pool pays out roughly in proportion to the liquidity left
  
  console.log(`[moonguard] ${p.symbol}: ${why}`);T.sell(p,why).catch(e=>console.log('[moonguard] sell err '+e.message)).finally(()=>{p.selling=false})}
+// Rug confirm: fetch just this coin and use its deepest pool where it is the base token; exit only if that still shows the pull.
+const rugChk=new Map();async function confirmRug(p,x){if(rugChk.get(p.mint))return;rugChk.set(p.mint,1);
+ try{const r=await fetch('https://api.dexscreener.com/latest/dex/tokens/'+p.mint,{signal:AbortSignal.timeout(4000)});let liq=null,px=x.marketCapSol;
+  if(r.ok){const j=await r.json();for(const pr of j.pairs||[]){if(pr.baseToken?.address!==p.mint)continue;const l=pr.liquidity?.usd;if(l!=null&&(liq==null||l>liq)){liq=l;if(+pr.priceUsd>0)px=+pr.priceUsd}}}
+  if(liq==null){p.rugMiss=(p.rugMiss||0)+1;if(p.rugMiss<3)return;liq=x.liq}else p.rugMiss=0; // confirm fetch failed 3x in a row: trust the poll
+  const liq0=p.features?.liq||0;if(liq<(S.rugMinLiqUsd||1500)||(liq0>0&&S.rugLiqDropPct>0&&liq<liq0*(1-S.rugLiqDropPct/100)))onTrade({...x,marketCapSol:px,liq,confirmed:true});
+  else console.log(`[moonguard] ${p.symbol}: rug alarm cleared, single-coin check shows pool $${Math.round(liq)} (batch poll said $${Math.round(x.liq)})`)}
+ catch(e){}finally{rugChk.delete(p.mint)}}
 // Fallback: pumpportal per-token trade subscriptions need a paid API key (server replies 'only available with...'), so the stream never delivered
 // trades for held coins. Poll DexScreener (batch, <=30 mints/call, limit 300/min) every guardPollSec for all held coins and run the same stop/crash rules.
 let polling=false;async function poll(){if(polling)return;const ms=[...new Set(held().map(p=>p.mint))];if(!ms.length)return;polling=true;
