@@ -12,6 +12,8 @@ function sync(){if(!w||w.readyState!==1)return;const want=new Set(held().map(p=>
  subs=want;for(const m of M.keys())if(!want.has(m))M.delete(m)}
 function onTrade(x){if(!x.mint||!(x.marketCapSol>0))return;const p=held().find(q=>q.mint===x.mint);if(!p||p.selling)return;
  const now=Date.now();let g=M.get(x.mint);if(!g){g={ref:x.marketCapSol,ratio:p.last>0?p.last/(p.solIn*(Number(p.tokens)/Number(p.tokens0||p.tokens))):1,hist:[]};M.set(x.mint,g)}
+ const prev=g.hist.length?g.hist[g.hist.length-1][1]:0; // one bad DexScreener sample (STONK showed -100% in one poll while its real sell paid +24%) must repeat on the next poll before it counts
+ if(x.src==='poll'&&!x.confirmed&&prev>0&&x.marketCapSol<prev*0.1){g.glitch=(g.glitch||0)+1;if(g.glitch<2){console.log(`[moonguard] ${p.symbol}: price sample ${((x.marketCapSol/prev-1)*100).toFixed(0)}% in one poll, waiting for the next poll to confirm`);return}}else g.glitch=0;
  g.hist.push([now,x.marketCapSol]);while(g.hist.length&&now-g.hist[0][0]>60000)g.hist.shift();
  const ch=(x.src==='poll'&&p.entryUsd>0)?(x.marketCapSol/p.entryUsd-1)*100:(g.ratio*x.marketCapSol/g.ref-1)*100, // poll path: measure from the real entry price (first-seen ref hid crashes that happened before the first poll)
  hi=Math.max(...g.hist.map(h=>h[1])),crash=(x.marketCapSol/hi-1)*100;
