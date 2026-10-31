@@ -7,3 +7,4 @@ data/
 !.env.example
 data.bak-*/
 scripts/__pycache__/
+sniper.log
