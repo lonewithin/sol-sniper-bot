@@ -18,9 +18,13 @@ function lossGate(){if(!(S.dailyLossLimitSol>0)||S.paper)return; /* paper testin
 const UNL=()=>S.paper===true&&S.paperUnlimited===true;
 // Re-entry cooldown: no new regular/Big Play buy of a coin that closed at a loss in the last lossCooldownH hours (12 re-entries after a loss since Oct 22: 1 win, the only win was Moon). Moon and manual buys exempt.
 const lossCool=(mint,tier,manual)=>{if(manual||tier==='MOON'||!(S.lossCooldownH>0))return;const lim=Date.now()-S.lossCooldownH*36e5;const c=st.closed.find(c=>c.mint===mint&&(c.pnl||0)<0&&new Date(c.closed||0).getTime()>lim);if(c)throw new Error(`re-entry cooldown: lost on this coin ${((Date.now()-new Date(c.closed).getTime())/36e5).toFixed(1)}h ago`)};
+// Oct 31 loss fix: tier switches (tierRunner/tierSwing) and a sleep-gap cool-off. After the box sleeps (gap > gapPauseMin), no new auto buys for gapCoolMin, and every open position is re-checked at once; a non-Moon position down gapExitPct or more on resume is sold.
+let gapUntil=0;function noteGap(ms){if(!(S.gapPauseMin>0)||ms<S.gapPauseMin*6e4)return false;gapUntil=Math.max(gapUntil,Date.now()+(S.gapCoolMin||0)*6e4);for(const p of st.open){p.lastChk=0;p.gapResume=true}console.log(`[gap] ${(ms/6e4).toFixed(0)} min gap: new buys paused ${S.gapCoolMin} min, ${st.open.length} open position(s) re-checked now`);return true}
+const gapPaused=()=>Date.now()<gapUntil;
+const entryGate=(tier,manual)=>{if(manual)return;if(tier==='RUNNER'&&S.tierRunner===false)throw new Error('RUNNER entries off (/set tierRunner)');if(tier==='SWING'&&S.tierSwing===false)throw new Error('SWING entries off (/set tierSwing)');if(gapPaused())throw new Error(`sleep-gap cool-off: new buys paused ${((gapUntil-Date.now())/6e4).toFixed(1)} more min`)};
 async function fastBuy(ev,sol=S.buySol,{tDetect=Date.now(),reasons=[]}={}){
  const usdF=require('./usdsize').on()?await require('./usdsize').solFor('FAST'):null;sol=usdF?usdF.sol:+Math.min(sol,S.maxPerTrade).toFixed(4);const spent=st.daily[today()]||0;
- lossGate();if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint)||PENDM.has(ev.mint))throw new Error('already holding');lossCool(ev.mint,'FAST',false);PENDM.add(ev.mint);try{
+ lossGate();if(!UNL()&&!usdF&&spent+sol>S.maxDailySol+1e-9)throw new Error('daily cap');if(st.open.filter(p=>p.tier!=='BIG'&&p.tier!=='MOON').length>=S.maxOpen)throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===ev.mint)||PENDM.has(ev.mint))throw new Error('already holding');entryGate('FAST',false);lossCool(ev.mint,'FAST',false);PENDM.add(ev.mint);try{
  const kp=W.load();const pool=ev.txType==='migrate'||ev.pool==='pump-amm'?'pump-amm':'auto';
  const tB=Date.now();const bytes=await F.build(kp.publicKey.toBase58(),'buy',ev.mint,sol,{pool});const tBuilt=Date.now();
  let sig='PAPER',tSigned=tBuilt,tSent=null;
@@ -41,7 +45,7 @@ async function buy(tok,sol=S.buySol,{manual=false,tier='SWING',pot=null,safety=n
  const US=require('./usdsize');let usdSz=null;if(!manual&&US.on())usdSz=await US.solFor(tier,require('./signals').todFactor().f||1);
  if(usdSz)sol=usdSz.sol;else{if(!manual&&(S.sizeByPotential||tier==='SECOND'))sol=sol*r.size;sol=+Math.min(sol,tier==='BIG'?S.bigBuySol:moon?S.moonBuySol:S.maxPerTrade).toFixed(4);}if(sizeMult>0&&sizeMult<1){sol=+(sol*sizeMult).toFixed(4);console.log(`[size] ${tok.symbol||tok.mint} ${tier} size x${sizeMult} (${features?.entryWhy||'reduced'})`)}const big=tier==='BIG';const grp=p=>p.tier==='MOON'?'M':p.tier==='BIG'?'B':'S',g=moon?'M':big?'B':'S';const dk=(moon?'moon:':big?'big:':'')+today();const spent=st.daily[dk]||0;const cap=moon?S.moonMaxDailySol:big?S.bigMaxDailySol:S.maxDailySol;
  if(!manual)lossGate();if(!UNL()&&!usdSz&&spent+sol>cap+1e-9)throw new Error(`daily cap ${cap} SOL reached`);
- if(st.open.filter(p=>grp(p)===g).length+(PEND[g]||0)>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint)||PENDM.has(tok.mint))throw new Error('already holding');lossCool(tok.mint,tier,manual);
+ if(st.open.filter(p=>grp(p)===g).length+(PEND[g]||0)>=(moon?S.moonMaxOpen:big?S.bigMaxOpen:S.maxOpen))throw new Error('max open positions for this mode');if(st.open.find(p=>p.mint===tok.mint)||PENDM.has(tok.mint))throw new Error('already holding');entryGate(tier,manual);lossCool(tok.mint,tier,manual);
  PEND[g]=(PEND[g]||0)+1;PENDM.add(tok.mint);try{ // reserve the slot while the async buy runs, so two coins bought at the same moment can't both slip past the per-mode limit
  if(!manual&&tier!=='MOON'){let pr=null;try{pr=(await pairsFor([tok.mint]))[tok.mint]}catch{}const sk=await require('./skills').entryOk(tok.mint,tok.symbol||'?',pr);if(!sk.ok)throw new Error('skill '+sk.skill+': '+sk.why)}
  const lam=Math.round(sol*LAMPORTS_PER_SOL);let q;try{q=await quote(SOL,tok.mint,lam,S.slippageBps)}catch(e){if(!S.paper)throw e; // paper: Jupiter down/429 -> price from DexScreener so the paper buy isn't skipped
@@ -71,7 +75,7 @@ let pauseUntil=0,losses=0;function streak(c){if(c.tier==='BIG'||c.tier==='MOON')
 const paused=()=>Date.now()<pauseUntil;
 // Box/phone sleep guard: if the monitor loop was frozen (device asleep, clock jump), don't count that gap toward hold/time limits.
 let lastTick=null;function sleepGuard(){const now=Date.now();if(lastTick==null){const lc=st.open.map(p=>p.lastChk||0).filter(Boolean);lastTick=lc.length?Math.max(...lc):now}
- const gap=now-lastTick;lastTick=now;if(gap>180000&&st.open.length){for(const p of st.open){p.opened+=gap;p.gapMin=+((p.gapMin||0)+gap/6e4).toFixed(1);if(p.lastChk)p.lastChk+=gap}console.log(`[monitor] loop was frozen ${(gap/6e4).toFixed(0)} min (device asleep?): hold clocks paused for ${st.open.length} open position(s)`)}}
+ const gap=now-lastTick;lastTick=now;noteGap(gap);if(gap>180000&&st.open.length){for(const p of st.open){p.opened+=gap;p.gapMin=+((p.gapMin||0)+gap/6e4).toFixed(1);if(p.lastChk)p.lastChk+=gap}console.log(`[monitor] loop was frozen ${(gap/6e4).toFixed(0)} min (device asleep?): hold clocks paused for ${st.open.length} open position(s)`)}}
 async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG'&&p.tier!=='MOON')||!p.lastChk||Date.now()-p.lastChk>=S.bigPollSec*1000);if(!due.length)return;const pairs=await pairsFor(due.map(p=>p.mint));
  for(const p of due){p.lastChk=Date.now();try{const r=p.rules||rules('SWING');const rest=Number(p.tokens)/Number(p.tokens0||p.tokens);
   let sol=null,dexFb=false;try{sol=(await value(p,p.tokens,true)).sol}catch(qe){const pr=pairs[p.mint],base=p.entryUsd||p.features?.px,prLiq=+(pr?.liquidity?.usd||0),liq0=+(p.features?.liq||0);if(pr?.priceUsd&&base>0&&prLiq>=Math.max(1000,liq0*0.1)){const curCh0=(+pr.priceUsd/base-1)*100;sol=p.solIn*rest*(1+curCh0/100);dexFb=true;if(p.fails%6===0)console.log(`[monitor] ${p.symbol} jup fail (${qe.message}), dex ${curCh0.toFixed(1)}%`)}else throw qe}
@@ -80,6 +84,7 @@ async function monitor(){sleepGuard();const due=st.open.filter(p=>(p.tier!=='BIG
   const m=potential(pairs[p.mint],{safety:p.safety||S.minScore,mint:p.mint});p.potNow=m.potential;let why=null;
   const f1=x=>require('./fmt').px(x);const armRule=['SECOND','RUNNER','BIG'].includes(p.tier)||!!r.pctTrail;const trail=r.trail||S.trailingPct;
   const armed=!armRule||p.peak>=S.trailArmPct||age>=S.trailGraceMin;
+  if(p.gapResume){p.gapResume=false;if(p.tier!=='MOON'&&S.gapExitPct>0&&curCh<=-S.gapExitPct){await sell(p,`😴 Sleep-gap guard: ${f1(curCh)} from entry on resume after the box was asleep (limit −${S.gapExitPct}%). Total ${f1(ch)}`);p.fails=0;continue}}
   if(S.maxLossCapPct>0&&curCh<=-Math.max(S.maxLossCapPct,r.sl||0)&&!(p.tier==='MOON'&&p.halfDone)){await sell(p,`⛔ Hard loss cap: ${f1(curCh)} from entry (cap −${Math.max(S.maxLossCapPct,r.sl||0)}%). Total ${f1(ch)}`);p.fails=0;continue}
   if(p.tier==='MOON'){p.maxX=+(1+p.peak/100).toFixed(2);if(p.halfDone&&!p.tp0)p.lockDone=true;const mtr=p.peak>=S.moonTightAt&&S.moonTightTrail>0?Math.min(r.trail,S.moonTightTrail):r.trail;
    if(!p.halfDone&&curCh<=-r.sl)why=`Stop loss: fell ${(-curCh).toFixed(1)}% below entry before the first take-profit (limit −${r.sl}%). Total ${f1(ch)}`;
@@ -119,4 +124,4 @@ async function withdraw(to,amt){const {PublicKey,SystemProgram,Transaction,sendA
  const bal=await conn.getBalance(kp.publicKey);const RES=10000;let lam=amt==='all'?bal-RES:Math.round(Number(amt)*LAMPORTS_PER_SOL);
  if(!(lam>0))throw new Error('Nothing to withdraw');if(lam>bal-5000)throw new Error('Insufficient balance (keep fee)');
  return sendAndConfirmTransaction(conn,new Transaction().add(SystemProgram.transfer({fromPubkey:kp.publicKey,toPubkey:dest,lamports:lam})),[kp]);}
-module.exports={paused,label,fastBuy,setNotify:f=>notify=f,stats,withdraw,buy,sell,monitor,st,balance,sellAll:async why=>{const out=[];for(const p of [...st.open])out.push(await sell(p,why).catch(e=>({symbol:p.symbol,err:e.message})));return out}};
+module.exports={noteGap,gapPaused,entryGate,paused,label,fastBuy,setNotify:f=>notify=f,stats,withdraw,buy,sell,monitor,st,balance,sellAll:async why=>{const out=[];for(const p of [...st.open])out.push(await sell(p,why).catch(e=>({symbol:p.symbol,err:e.message})));return out}};

@@ -1,0 +1,20 @@
+// Oct 31 loss-fix tests (run from the isolated harness copy via scripts/lossfix-test.sh): tier switches, sleep-gap cool-off, gap exit, cap values.
+const path=require('path');if(!/harness/.test(path.resolve(__dirname,'..')))throw new Error('refusing: run from isolated harness copy');
+const C=require('../src/config');const S=C.settings;if(!S.paper)throw new Error('refusing: not paper');
+const T=require('../src/trader');let ok=0,bad=0;const t=(n,c)=>{if(c){ok++;console.log('PASS',n)}else{bad++;console.log('FAIL',n)}};
+const thr=f=>{try{f();return null}catch(e){return e.message}};
+t('tierRunner off by default',S.tierRunner===false);t('tierSwing off by default',S.tierSwing===false);
+t('maxLossCapPct 20',S.maxLossCapPct===20);t('bigSl 20',S.bigSl===20);t('Moon untouched (moonSl 40)',S.moonSl===40);
+t('RUNNER blocked',/RUNNER entries off/.test(thr(()=>T.entryGate('RUNNER',false))||''));
+t('SWING blocked',/SWING entries off/.test(thr(()=>T.entryGate('SWING',false))||''));
+t('BIG allowed',thr(()=>T.entryGate('BIG',false))===null);t('MOON allowed',thr(()=>T.entryGate('MOON',false))===null);
+t('SCALP/FAST allowed',thr(()=>T.entryGate('SCALP',false))===null&&thr(()=>T.entryGate('FAST',false))===null);
+t('manual RUNNER allowed',thr(()=>T.entryGate('RUNNER',true))===null);
+S.tierRunner=true;t('/set tierRunner on re-enables',thr(()=>T.entryGate('RUNNER',false))===null);S.tierRunner=false;
+t('short gap (2 min) ignored',T.noteGap(2*6e4)===false&&!T.gapPaused());
+T.st.open.push({mint:'TESTGAP',tier:'BIG',lastChk:Date.now()});
+t('10 min gap triggers',T.noteGap(10*6e4)===true&&T.gapPaused());
+t('BIG blocked during cool-off',/sleep-gap cool-off/.test(thr(()=>T.entryGate('BIG',false))||''));
+t('manual allowed during cool-off',thr(()=>T.entryGate('BIG',true))===null);
+const g=T.st.open.find(p=>p.mint==='TESTGAP');t('open position forced re-check + flagged',g.lastChk===0&&g.gapResume===true);T.st.open.splice(T.st.open.indexOf(g),1);
+console.log(`lossfix: ${ok}/${ok+bad} pass`);process.exit(bad?1:0);
